@@ -8,6 +8,7 @@ import {
   staggerContainer as containerVariants,
 } from "../lib/motion.js";
 import { Button } from "../ui/Button.js";
+import { StatusDot } from "../ui/StatusDot.js";
 import { Container } from "./Container.js";
 
 export interface HeroStat {
@@ -68,7 +69,7 @@ export function Hero({ eyebrow, title, description, stats, actions, className }:
           >
             {eyebrow ? (
               <motion.div variants={itemVariants} className="flex items-center gap-2">
-                <StatusDot reduced={Boolean(prefersReducedMotion)} />
+                <StatusDot />
                 <span className="font-mono text-caption uppercase tracking-telemetry text-text-muted">
                   {eyebrow}
                 </span>
@@ -155,22 +156,6 @@ function HeroActionButton({ action }: { action: HeroAction }) {
     <Button variant={variant} onClick={action.onClick}>
       {action.label}
     </Button>
-  );
-}
-
-/** Small pulsing status-LED dot — the "Nothing Design" accent-dot reference. */
-function StatusDot({ reduced }: { reduced: boolean }) {
-  return (
-    <span className="relative flex size-2">
-      {!reduced ? (
-        <motion.span
-          className="absolute inline-flex size-full rounded-full bg-constructor-primary"
-          animate={{ opacity: [0.6, 0, 0.6], scale: [1, 1.8, 1] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        />
-      ) : null}
-      <span className="relative inline-flex size-2 rounded-full bg-constructor-primary" />
-    </span>
   );
 }
 
