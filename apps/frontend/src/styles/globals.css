@@ -1,0 +1,6 @@
+/**
+ * Single global stylesheet. Everything (Tailwind, fonts, design tokens,
+ * constructor themes) is defined once in @pit-wall-insight/config and
+ * imported here — this file should never define its own tokens.
+ */
+@import "@pit-wall-insight/config/tailwind/index.css";

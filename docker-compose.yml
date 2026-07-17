@@ -1,0 +1,67 @@
+name: pit-wall-insight
+
+services:
+  postgres:
+    image: postgres:18.4-alpine
+    container_name: pitwall-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pitwall}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pitwall}
+      POSTGRES_DB: ${POSTGRES_DB:-pit_wall_insight_raw}
+      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES:-pit_wall_insight_analytics}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-pitwall} -d ${POSTGRES_DB:-pit_wall_insight_raw}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - pitwall
+
+  pgadmin:
+    image: dpage/pgadmin4:9.16
+    container_name: pitwall-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@pitwallinsight.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-pitwall}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_DISABLE_POSTFIX: "True"
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./infrastructure/docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/misc/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - pitwall
+
+volumes:
+  postgres_data:
+    name: pitwall_postgres_data
+  pgadmin_data:
+    name: pitwall_pgadmin_data
+
+networks:
+  pitwall:
+    name: pitwall-network
+    driver: bridge

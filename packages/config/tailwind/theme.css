@@ -1,0 +1,191 @@
+/**
+ * Bridges tokens.css into Tailwind's utility generator.
+ *
+ * `@theme inline` tells Tailwind v4 "these variables already exist
+ * elsewhere (tokens.css) — alias them into your namespace instead of
+ * redefining them." This is the mechanism that turns
+ * `--color-background-primary` into the `bg-background-primary` utility,
+ * `--radius-lg` into `rounded-lg`, and so on, while tokens.css remains the
+ * single place values are actually assigned (and where constructor themes
+ * override them at runtime via `[data-constructor]`).
+ *
+ * Not every token in tokens.css has an established Tailwind v4 theme
+ * namespace (e.g. container/content widths, z-index, grid/hero/component
+ * tokens). Those stay as plain CSS variables, consumed either directly in
+ * component CSS or via Tailwind's arbitrary-value syntax, e.g.
+ * `max-w-[var(--content-width)]`.
+ */
+
+@theme inline {
+  /* --- Colors -> bg-*, text-*, border-*, ring-*, fill-*, ... --- */
+  --color-background-primary: var(--color-background-primary);
+  --color-background-secondary: var(--color-background-secondary);
+  --color-background-tertiary: var(--color-background-tertiary);
+  --color-background-overlay: var(--color-background-overlay);
+  --color-background-modal: var(--color-background-modal);
+
+  --color-surface-primary: var(--color-surface-primary);
+  --color-surface-secondary: var(--color-surface-secondary);
+  --color-surface-elevated: var(--color-surface-elevated);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-surface-active: var(--color-surface-active);
+
+  --color-border-default: var(--color-border-default);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-border-hover: var(--color-border-hover);
+  --color-border-active: var(--color-border-active);
+  --color-border-focus: var(--color-border-focus);
+
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-disabled: var(--color-text-disabled);
+  --color-text-inverse: var(--color-text-inverse);
+
+  --color-accent-primary: var(--color-accent-primary);
+  --color-accent-secondary: var(--color-accent-secondary);
+  --color-accent-glow: var(--color-accent-glow);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-active: var(--color-accent-active);
+
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+  --color-info: var(--color-info);
+  --color-neutral: var(--color-neutral);
+
+  --color-constructor-primary: var(--color-constructor-primary);
+  --color-constructor-secondary: var(--color-constructor-secondary);
+  --color-constructor-glow: var(--color-constructor-glow);
+  --color-constructor-chart: var(--color-constructor-chart);
+  --color-constructor-cursor: var(--color-constructor-cursor);
+  --color-constructor-ambient: var(--color-constructor-ambient);
+
+  /* --- Fonts -> font-display, font-body, font-mono, font-dotmatrix --- */
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+  --font-dotmatrix: var(--font-dotmatrix);
+
+  /* --- Font sizes -> text-display-xl, text-heading-md, ... ---
+     Tailwind v4 pairs each `--text-<name>` with an optional
+     `--text-<name>--line-height` companion variable. */
+  --text-display-xl: var(--font-size-display-xl);
+  --text-display-xl--line-height: var(--leading-tight);
+  --text-display-lg: var(--font-size-display-lg);
+  --text-display-lg--line-height: var(--leading-tight);
+  --text-display-md: var(--font-size-display-md);
+  --text-display-md--line-height: var(--leading-tight);
+
+  --text-heading-xl: var(--font-size-heading-xl);
+  --text-heading-xl--line-height: var(--leading-tight);
+  --text-heading-lg: var(--font-size-heading-lg);
+  --text-heading-lg--line-height: var(--leading-normal);
+  --text-heading-md: var(--font-size-heading-md);
+  --text-heading-md--line-height: var(--leading-normal);
+  --text-heading-sm: var(--font-size-heading-sm);
+  --text-heading-sm--line-height: var(--leading-normal);
+
+  --text-body-lg: var(--font-size-body-lg);
+  --text-body-lg--line-height: var(--leading-normal);
+  --text-body-md: var(--font-size-body-md);
+  --text-body-md--line-height: var(--leading-normal);
+  --text-body-sm: var(--font-size-body-sm);
+  --text-body-sm--line-height: var(--leading-normal);
+
+  --text-label-lg: var(--font-size-label-lg);
+  --text-label-lg--line-height: var(--leading-normal);
+  --text-label-md: var(--font-size-label-md);
+  --text-label-md--line-height: var(--leading-normal);
+  --text-label-sm: var(--font-size-label-sm);
+  --text-label-sm--line-height: var(--leading-normal);
+
+  --text-caption: var(--font-size-caption);
+  --text-caption--line-height: var(--leading-normal);
+  --text-telemetry: var(--font-size-telemetry);
+  --text-telemetry--line-height: var(--leading-normal);
+  --text-code: var(--font-size-code);
+  --text-code--line-height: var(--leading-normal);
+
+  /* --- Font weights -> font-light, font-regular, ... --- */
+  --font-weight-light: var(--font-weight-light);
+  --font-weight-regular: var(--font-weight-regular);
+  --font-weight-medium: var(--font-weight-medium);
+  --font-weight-semibold: var(--font-weight-semibold);
+  --font-weight-bold: var(--font-weight-bold);
+
+  /* --- Letter spacing -> tracking-tight, tracking-wide, ... --- */
+  --tracking-tight: var(--tracking-tight);
+  --tracking-normal: var(--tracking-normal);
+  --tracking-wide: var(--tracking-wide);
+  --tracking-telemetry: var(--tracking-telemetry);
+
+  /* --- Line height -> leading-tight, leading-normal, leading-relaxed --- */
+  --leading-tight: var(--leading-tight);
+  --leading-normal: var(--leading-normal);
+  --leading-relaxed: var(--leading-relaxed);
+
+  /* --- Spacing -> p-*, m-*, gap-*, w-*, h-*, ... ---
+     Tailwind v4 spacing utilities are `calc(var(--spacing) * N)`. Setting
+     the base unit to the design system's 4px step means every utility
+     Tailwind generates (p-1, p-2, p-3, p-4, p-6, p-8, ...) lands exactly
+     on the documented allowed values (4/8/12/16/24/32/40/48/64/96/128px)
+     for the multiples the design system actually names. Tailwind will
+     still happily generate p-5, p-7, etc. from the same formula — the
+     scalar approach can't hard-block those, so "never use arbitrary
+     spacing" remains a code-review/lint concern, not something Tailwind's
+     config alone can enforce. */
+  --spacing: var(--spacing-1);
+
+  /* --- Radius -> rounded-xs, rounded-md, rounded-full, ... --- */
+  --radius-none: var(--radius-none);
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-full: var(--radius-full);
+
+  /* --- Shadows -> shadow-sm, shadow-panel, shadow-floating, ... --- */
+  --shadow-none: var(--shadow-none);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-panel: var(--shadow-panel);
+  --shadow-dialog: var(--shadow-dialog);
+  --shadow-floating: var(--shadow-floating);
+
+  /* --- Blur -> blur-xs, blur-md, ... --- */
+  --blur-xs: var(--blur-xs);
+  --blur-sm: var(--blur-sm);
+  --blur-md: var(--blur-md);
+  --blur-lg: var(--blur-lg);
+
+  /* --- Easing -> ease-standard, ease-telemetry, ... --- */
+  --ease-standard: var(--ease-standard);
+  --ease-out: var(--ease-out);
+  --ease-in: var(--ease-in);
+  --ease-in-out: var(--ease-in-out);
+  --ease-telemetry: var(--ease-telemetry);
+
+  /* Durations are intentionally NOT aliased here: Tailwind v4 has no
+     themeable `--duration-*` namespace (its `duration-*` utility takes a
+     raw millisecond number, e.g. `duration-150`, not a named lookup).
+     Consume the named durations from tokens.css via the CSS-variable
+     shorthand instead, e.g. `duration-(--duration-theme)`. */
+}
+
+/*
+ * Breakpoints can't be aliased via `@theme inline` like everything else:
+ * Tailwind compiles them straight into `@media (width >= ...)` conditions,
+ * and CSS media query conditions must be literal values — `var()` isn't
+ * resolvable there. These numbers are intentionally duplicated from
+ * tokens.css's --breakpoint-* (kept identical on purpose); every other
+ * token category doesn't have this restriction and stays aliased above.
+ */
+@theme {
+  --breakpoint-tablet: 768px;
+  --breakpoint-laptop: 1024px;
+  --breakpoint-desktop: 1440px;
+  --breakpoint-ultrawide: 1920px;
+}

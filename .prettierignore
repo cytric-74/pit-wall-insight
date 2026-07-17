@@ -1,0 +1,17 @@
+node_modules
+.turbo
+dist
+build
+coverage
+pnpm-lock.yaml
+
+# Python / data-engineering artifacts (not formatted by Prettier)
+**/__pycache__
+**/*.pyc
+.venv
+venv
+warehouse/dbt/target
+warehouse/dbt/logs
+
+# Docs are hand-formatted prose, not Prettier-managed
+docs/**/*.md

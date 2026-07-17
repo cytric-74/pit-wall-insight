@@ -1,0 +1,33 @@
+/**
+ * Typography System (docs/assets/02_TYPOGRAPHY_SYSTEM.md).
+ *
+ * Four font families, each with exactly one job:
+ *   - Space Grotesk : Display   — hero titles, landing sections, major statistics
+ *   - Inter         : Interface — body text, navigation, labels, tables
+ *   - IBM Plex Mono : Data      — telemetry, numbers, statistics, timing
+ *   - Silkscreen    : LED       — lap time / countdown / live timing only, never paragraphs
+ *
+ * The docs specify a "Dot Matrix Font" without naming a concrete typeface.
+ * Silkscreen (Google Fonts) is the closest widely-available open-source
+ * pixel/dot-matrix display font and is used here as that concrete choice.
+ *
+ * Self-hosted via @fontsource (no external network request at runtime).
+ */
+
+/* Space Grotesk — display weights used in the type scale (500/600/700) */
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+
+/* Inter — full range needed for body/interface hierarchy */
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+
+/* IBM Plex Mono — telemetry/data, regular + medium for emphasis */
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+/* Silkscreen — LED/live-timing display, regular weight only (the family
+   ships regular + bold; regular matches the dot-matrix reference best) */
+@import "@fontsource/silkscreen/400.css";

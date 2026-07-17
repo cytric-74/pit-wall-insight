@@ -1,0 +1,90 @@
+/**
+ * Constructor theme overrides (docs/03_DESIGN_SYSTEM.md — Team Color
+ * Tokens; docs/assets/12_THEME_ENGINE.md).
+ *
+ * Selecting a constructor changes exactly these tokens — accent/glow and
+ * the constructor-* aliases derived from them (chart/cursor/ambient/
+ * gradient, see tokens.css). Layout, typography, and motion never change.
+ *
+ * The theme provider (packages/ui/src/theme/theme-provider.tsx) sets
+ * `data-constructor="<id>"` on <html>; it never inlines these colors
+ * itself, so this stylesheet is the only place a constructor's hex values
+ * live for CSS purposes. The same values are duplicated in
+ * `packages/ui/src/theme/constructors.ts` for use in JS/TS (e.g. rendering
+ * a constructor picker) — there is no build-time codegen syncing the two
+ * yet, so a change here must be mirrored there and vice versa.
+ */
+
+[data-constructor="ferrari"] {
+  --color-accent-primary: #dc0000;
+  --color-accent-secondary: #ff5a5a;
+  --color-accent-glow: rgb(220 0 0 / 30%);
+}
+
+[data-constructor="mercedes"] {
+  --color-accent-primary: #00d2be;
+  --color-accent-secondary: #71fff2;
+  --color-accent-glow: rgb(0 210 190 / 30%);
+}
+
+[data-constructor="mclaren"] {
+  --color-accent-primary: #ff8700;
+  --color-accent-secondary: #ffbe73;
+  --color-accent-glow: rgb(255 135 0 / 30%);
+}
+
+[data-constructor="red-bull"] {
+  --color-accent-primary: #1e5bc6;
+  --color-accent-secondary: #5d93f5;
+  --color-accent-glow: rgb(30 91 198 / 30%);
+}
+
+[data-constructor="aston-martin"] {
+  --color-accent-primary: #006f62;
+  --color-accent-secondary: #4ec5b7;
+  --color-accent-glow: rgb(0 111 98 / 30%);
+}
+
+[data-constructor="williams"] {
+  --color-accent-primary: #005aff;
+  --color-accent-secondary: #6eaeff;
+  --color-accent-glow: rgb(0 90 255 / 30%);
+}
+
+[data-constructor="alpine"] {
+  --color-accent-primary: #ff87bc;
+  --color-accent-secondary: #ffd0e4;
+  --color-accent-glow: rgb(255 135 188 / 30%);
+}
+
+[data-constructor="racing-bulls"] {
+  --color-accent-primary: #6692ff;
+  --color-accent-secondary: #a9c3ff;
+  --color-accent-glow: rgb(102 146 255 / 30%);
+}
+
+[data-constructor="haas"] {
+  --color-accent-primary: #b6babd;
+  --color-accent-secondary: #ececec;
+  --color-accent-glow: rgb(182 186 189 / 30%);
+}
+
+[data-constructor="kick-sauber"] {
+  --color-accent-primary: #52e252;
+  --color-accent-secondary: #a9ffa9;
+  --color-accent-glow: rgb(82 226 82 / 30%);
+}
+
+/* Every [data-constructor] selector above only ever touches
+   --color-accent-*. The constructor-* aliases (tokens.css) already
+   reference the accent tokens, so chart colors, cursor color, ambient
+   glow, and the gradient all update automatically without needing to be
+   repeated per constructor here.
+
+   Note: smoothly *animating* the transition between constructors
+   (docs/assets/05_MOTION_SYSTEM.md's ~600ms theme transition) isn't
+   solved here — a CSS custom property change is not itself interpolated,
+   only a standard animatable property (`color`, `background-color`, ...)
+   that consumes it, and only on elements that declare their own
+   `transition`. That belongs to individual components as they're built,
+   not to this token file. */

@@ -1,0 +1,31 @@
+{
+  "name": "@pit-wall-insight/config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared TypeScript, ESLint, Prettier, and design-token/Tailwind configuration for every package in the monorepo.",
+  "exports": {
+    "./typescript/base.json": "./typescript/base.json",
+    "./eslint/base.mjs": "./eslint/base.mjs",
+    "./prettier/index.mjs": "./prettier/index.mjs",
+    "./tailwind/index.css": "./tailwind/index.css",
+    "./tailwind/tokens.css": "./tailwind/tokens.css",
+    "./tailwind/fonts.css": "./tailwind/fonts.css",
+    "./tailwind/theme.css": "./tailwind/theme.css",
+    "./tailwind/constructor-themes.css": "./tailwind/constructor-themes.css"
+  },
+  "dependencies": {
+    "@eslint/js": "^10.0.1",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/silkscreen": "^5.2.8",
+    "@fontsource/space-grotesk": "^5.2.10",
+    "eslint-config-prettier": "^10.1.8",
+    "tailwindcss": "^4.3.3",
+    "typescript-eslint": "^8.64.0"
+  },
+  "peerDependencies": {
+    "eslint": "^10.7.0",
+    "prettier": "^3.9.5",
+    "typescript": "^6.0.3"
+  }
+}

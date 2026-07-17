@@ -1,0 +1,376 @@
+/**
+ * Design Tokens (docs/assets/17_DESIGN_TOKENS.md), expressed as CSS custom
+ * properties — the single source of truth every other layer (Tailwind
+ * theme, components, the theme provider) reads from. Nothing downstream
+ * should hardcode a color, size, or duration; everything traces back here.
+ *
+ * Dark mode only (docs/03_DESIGN_SYSTEM.md, Engineering Decision 001:
+ * "Dark Mode Only — maintains a premium motorsport identity and avoids
+ * doubling design complexity"). There is no light theme to configure.
+ *
+ * Where docs/assets/17_DESIGN_TOKENS.md names a token category but doesn't
+ * give it a concrete value (breakpoints, z-index order, blur radii, ...),
+ * a value was chosen and is called out below. Where the token-naming
+ * scheme is finer-grained than the concrete scale given elsewhere in the
+ * docs (e.g. typography sizes, spacing), intermediate steps were
+ * interpolated — flagged per section.
+ */
+
+:root {
+  /* ---------------------------------------------------------------------
+   * Background (docs/assets/03_COLOR_SYSTEM.md — Neutral Palette)
+   * background-tertiary/overlay/modal are inferred: the color doc only
+   * names two background steps before "Surface" takes over.
+   * ------------------------------------------------------------------- */
+  --color-background-primary: #050505;
+  --color-background-secondary: #0b0b0b;
+  --color-background-tertiary: #111111;
+  --color-background-overlay: rgb(0 0 0 / 60%);
+  --color-background-modal: #111111;
+
+  /* Surface (docs/03_DESIGN_SYSTEM.md — Core Palette) */
+  --color-surface-primary: #111111;
+  --color-surface-secondary: #181818;
+  --color-surface-elevated: #181818;
+  --color-surface-hover: #202020;
+  --color-surface-active: #202020; /* inferred: reuses hover surface */
+
+  /* Borders / dividers */
+  --color-border-default: #2b2b2b;
+  --color-border-subtle: rgb(255 255 255 / 8%); /* "Divider" */
+  --color-border-hover: #3a3a3a; /* inferred: brighter than default */
+  --color-border-active: var(--color-accent-primary);
+  --color-border-focus: var(--color-accent-primary);
+
+  /* Typography colors */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #c7c7c7;
+  --color-text-muted: #8d8d8d;
+  --color-text-disabled: #5a5a5a;
+  --color-text-inverse: #050505; /* inferred: for text on accent-filled surfaces */
+
+  /* ---------------------------------------------------------------------
+   * Accent — default state before any constructor theme is applied.
+   * hover/active shades are inferred (docs give only the base + glow).
+   * ------------------------------------------------------------------- */
+  --color-accent-primary: #ff1801;
+  --color-accent-secondary: #ff5a3d;
+  --color-accent-glow: rgb(255 24 1 / 30%);
+  --color-accent-hover: #e01600;
+  --color-accent-active: #c71300;
+
+  /* Semantic (never change with constructor theme) */
+  --color-success: #00c853;
+  --color-warning: #ffc107;
+  --color-danger: #e53935;
+  --color-info: #00b0ff;
+  --color-neutral: var(--color-text-muted);
+
+  /* ---------------------------------------------------------------------
+   * Constructor theme tokens — the ONLY color tokens a constructor theme
+   * is allowed to touch (docs/assets/12_THEME_ENGINE.md). Default state
+   * mirrors the generic accent until a constructor is selected; see
+   * constructors.ts for the per-team overrides applied via
+   * [data-constructor="..."].
+   * ------------------------------------------------------------------- */
+  --color-constructor-primary: var(--color-accent-primary);
+  --color-constructor-secondary: var(--color-accent-secondary);
+  --color-constructor-glow: var(--color-accent-glow);
+  --color-constructor-chart: var(--color-constructor-primary);
+  --color-constructor-cursor: var(--color-constructor-primary);
+  --color-constructor-ambient: var(--color-constructor-glow);
+  --color-constructor-gradient: linear-gradient(
+    135deg,
+    var(--color-constructor-primary) 0%,
+    var(--color-constructor-secondary) 100%
+  );
+
+  /* ---------------------------------------------------------------------
+   * Typography — font families (docs/assets/02_TYPOGRAPHY_SYSTEM.md)
+   * ------------------------------------------------------------------- */
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  --font-dotmatrix: "Silkscreen", ui-monospace, monospace;
+
+  /*
+   * Font sizes. The type scale (docs/03_DESIGN_SYSTEM.md — Font Scale) has
+   * 10 concrete sizes; the token names below (docs/assets/17) describe 16
+   * slots. Missing steps (heading-lg, body-lg, label-*, code) are
+   * interpolated between the nearest documented sizes.
+   */
+  --font-size-display-xl: 4rem; /* 64px — Display XXL */
+  --font-size-display-lg: 3rem; /* 48px — Display XL */
+  --font-size-display-md: 2.5rem; /* 40px — Display */
+  --font-size-heading-xl: 2rem; /* 32px — Heading */
+  --font-size-heading-lg: 1.75rem; /* 28px — inferred */
+  --font-size-heading-md: 1.5rem; /* 24px — Sub Heading */
+  --font-size-heading-sm: 1.25rem; /* 20px — Section */
+  --font-size-body-lg: 1.125rem; /* 18px — inferred */
+  --font-size-body-md: 1rem; /* 16px — Body */
+  --font-size-body-sm: 0.875rem; /* 14px — Small */
+  --font-size-label-lg: 0.875rem; /* 14px — reuses Small */
+  --font-size-label-md: 0.8125rem; /* 13px — reuses Telemetry */
+  --font-size-label-sm: 0.75rem; /* 12px — reuses Caption */
+  --font-size-caption: 0.75rem; /* 12px — Caption */
+  --font-size-telemetry: 0.8125rem; /* 13px — Telemetry */
+  --font-size-code: 0.8125rem; /* 13px — reuses Telemetry */
+
+  /* Weights */
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Tracking (letter-spacing) */
+  --tracking-tight: -0.02em; /* Display */
+  --tracking-normal: 0em; /* Paragraphs */
+  --tracking-wide: 0.04em; /* Metadata */
+  --tracking-telemetry: 0.08em; /* Telemetry, live-timing style */
+  --tracking-display: -0.02em;
+
+  /* Line height */
+  --leading-tight: 1.1;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+
+  /* ---------------------------------------------------------------------
+   * Spacing (docs/03_DESIGN_SYSTEM.md — 8px base unit, explicit allowed
+   * list: 4 8 12 16 24 32 40 48 64 96 128). Token keys follow the
+   * Tailwind-style "steps of 4px" convention used by docs/assets/17's
+   * space-0..space-64 naming (key * 4px = value), constrained to exactly
+   * the values the design system allows — no arbitrary in-between steps.
+   * ------------------------------------------------------------------- */
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-24: 96px;
+  --spacing-32: 128px;
+
+  /* ---------------------------------------------------------------------
+   * Radius (docs/03_DESIGN_SYSTEM.md — Cards 20, Buttons 14, Inputs 12,
+   * Charts 20, Tags 999). radius-xs/xl are inferred intermediate steps.
+   * ------------------------------------------------------------------- */
+  --radius-none: 0px;
+  --radius-xs: 8px;
+  --radius-sm: 12px; /* Inputs */
+  --radius-md: 14px; /* Buttons */
+  --radius-lg: 20px; /* Cards / Charts */
+  --radius-xl: 24px; /* inferred */
+  --radius-full: 999px; /* Tags */
+
+  /* ---------------------------------------------------------------------
+   * Shadows (docs/03_DESIGN_SYSTEM.md — Default/Large/Glow).
+   * shadow-sm is inferred; panel/dialog/floating alias the named shadows.
+   * ------------------------------------------------------------------- */
+  --shadow-none: none;
+  --shadow-sm: 0 4px 12px rgb(0 0 0 / 20%);
+  --shadow-md: 0 10px 30px rgb(0 0 0 / 25%); /* Default */
+  --shadow-lg: 0 20px 60px rgb(0 0 0 / 45%); /* Large */
+  --shadow-panel: var(--shadow-md);
+  --shadow-dialog: var(--shadow-lg);
+  --shadow-floating: 0 0 30px rgb(255 24 1 / 18%); /* Glow */
+
+  /* ---------------------------------------------------------------------
+   * Blur (docs/assets/16_VISUAL_EFFECTS.md — blur allowed only for
+   * dialogs/dropdowns/command palette/tooltips/hero images; never
+   * glassmorphism, never on primary content). Only "md" has a documented
+   * value (16px); xs/sm/lg are inferred around it.
+   * ------------------------------------------------------------------- */
+  --blur-xs: 4px;
+  --blur-sm: 8px;
+  --blur-md: 16px;
+  --blur-lg: 24px;
+
+  /* Opacity */
+  --opacity-0: 0;
+  --opacity-10: 0.1;
+  --opacity-20: 0.2;
+  --opacity-40: 0.4;
+  --opacity-60: 0.6;
+  --opacity-80: 0.8;
+  --opacity-100: 1;
+
+  /* ---------------------------------------------------------------------
+   * Motion — durations (docs/assets/05_MOTION_SYSTEM.md Timing Scale has
+   * 10 named steps; docs/assets/17 only names 5 duration-* tokens). The 5
+   * official tokens are mapped below; the remaining motion-system values
+   * are kept as additional, explicitly-named durations since real
+   * components (page transitions, theme switches) need them.
+   * ------------------------------------------------------------------- */
+  --duration-instant: 100ms;
+  --duration-fast: 150ms; /* Hover */
+  --duration-normal: 220ms; /* Small Components */
+  --duration-slow: 450ms; /* Charts */
+  --duration-theme: 600ms; /* Theme Transition */
+  /* additional named durations from the Motion System doc */
+  --duration-selection: 180ms;
+  --duration-card: 280ms;
+  --duration-panel: 350ms;
+  --duration-page: 700ms; /* Page Transition */
+  --duration-max: 1000ms; /* Maximum — nothing should exceed this */
+
+  /*
+   * Easing. Named curves in the docs (easeOutExpo, easeOutQuart,
+   * easeInQuart) aren't CSS keywords, so each is expressed as the closest
+   * standard cubic-bezier approximation. ease-in-out and ease-telemetry
+   * are inferred (named in docs/assets/17 without a specified curve).
+   */
+  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1); /* easeOutExpo */
+  --ease-out: cubic-bezier(0.25, 1, 0.5, 1); /* easeOutQuart */
+  --ease-in: cubic-bezier(0.5, 0, 0.75, 0); /* easeInQuart */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1); /* inferred */
+  --ease-telemetry: cubic-bezier(0.4, 0, 0.2, 1); /* inferred: mechanical/precise */
+
+  /* Scale (docs/assets/17 — "never exceed 1.03x") */
+  --scale-hover: 1.01;
+  --scale-active: 1.02;
+  --scale-pressed: 0.98;
+
+  /* ---------------------------------------------------------------------
+   * Z-index — order is given by docs/assets/17's token list; concrete
+   * values are inferred (docs never assign numbers).
+   * ------------------------------------------------------------------- */
+  --z-background: 0;
+  --z-content: 10;
+  --z-header: 20;
+  --z-sidebar: 30;
+  --z-dropdown: 40;
+  --z-tooltip: 50;
+  --z-modal: 60;
+  --z-toast: 70;
+  --z-overlay: 80;
+
+  /* ---------------------------------------------------------------------
+   * Grid / layout (docs/03_DESIGN_SYSTEM.md — Grid section)
+   * ------------------------------------------------------------------- */
+  --grid-columns: 12;
+  --grid-gap: 24px; /* Gutter */
+  --container-width: 1600px; /* Max Width */
+  --content-width: 1440px;
+  --reading-width: 720px; /* inferred comfortable measure */
+
+  --container-max: var(--container-width);
+  --section-gap: var(--spacing-16);
+  --content-gap: var(--spacing-6);
+  --panel-gap: var(--spacing-4);
+  --page-padding: var(--spacing-6);
+  --page-margin: var(--spacing-8);
+
+  /* ---------------------------------------------------------------------
+   * Breakpoints — no pixel values are given in the docs; conventional,
+   * widely-used steps are used, with `desktop` aligned to content-width.
+   * ------------------------------------------------------------------- */
+  --breakpoint-mobile: 0px;
+  --breakpoint-tablet: 768px;
+  --breakpoint-laptop: 1024px;
+  --breakpoint-desktop: 1440px;
+  --breakpoint-ultrawide: 1920px;
+
+  --sidebar-breakpoint: var(--breakpoint-tablet);
+  --grid-breakpoint: var(--breakpoint-laptop);
+
+  --mobile-padding: var(--spacing-4);
+  --tablet-padding: var(--spacing-6);
+  --desktop-padding: var(--spacing-8);
+
+  /* ---------------------------------------------------------------------
+   * Component tokens
+   * ------------------------------------------------------------------- */
+  --sidebar-width: 320px; /* docs/03 Layout — Sidebar */
+  --sidebar-collapsed: 72px; /* inferred */
+  --sidebar-padding: var(--spacing-4);
+
+  --nav-height: 64px; /* inferred */
+  --nav-width: var(--sidebar-width);
+  --nav-gap: var(--spacing-2);
+
+  --button-height: 44px; /* inferred */
+  --button-padding: var(--spacing-4);
+  --button-radius: var(--radius-md);
+  --button-gap: var(--spacing-2);
+
+  --card-padding: var(--spacing-6);
+  --card-gap: var(--spacing-4);
+  --card-radius: var(--radius-lg);
+  --card-border: var(--color-border-default);
+
+  /* Chart tokens (docs/assets/17 lists this both under "Component Tokens"
+     and its own "Chart Tokens" section — consolidated into one set) */
+  --chart-primary: var(--color-constructor-primary);
+  --chart-secondary: var(--color-constructor-secondary);
+  --chart-grid: var(--color-border-subtle);
+  --chart-axis: var(--color-text-muted);
+  --chart-crosshair: var(--color-constructor-primary);
+  --chart-tooltip: var(--color-surface-elevated);
+  --chart-annotation: var(--color-text-secondary);
+  --chart-padding: var(--spacing-4);
+
+  --cursor-size: 8px; /* inferred: small dot */
+  --cursor-ring: 32px; /* inferred: hover ring diameter */
+  --cursor-transition: var(--duration-fast);
+  --cursor-crosshair: 1px; /* line thickness */
+  --cursor-glow: var(--color-constructor-glow);
+
+  /* Hero — docs/assets/04_LAYOUT_SYSTEM.md: "Hero never exceeds 30%
+     viewport height" is encoded directly as hero-max-height. */
+  --hero-max-height: 30vh;
+  --hero-overlay: rgb(5 5 5 / 60%);
+  --hero-gradient: var(--color-constructor-gradient);
+  --hero-spacing: var(--spacing-12);
+  --hero-title: var(--font-size-display-md);
+  --hero-subtitle: var(--font-size-heading-sm);
+
+  /* Theme (semantic aliases a component should prefer over reaching for
+     constructor-* directly, keeping "theme" and "constructor" concepts
+     separable if non-constructor themes are added later, per
+     docs/assets/12_THEME_ENGINE.md "Future Themes") */
+  --theme-accent: var(--color-constructor-primary);
+  --theme-secondary: var(--color-constructor-secondary);
+  --theme-glow: var(--color-constructor-glow);
+  --theme-shadow: var(--shadow-floating);
+  --theme-gradient: var(--color-constructor-gradient);
+  --theme-particle: rgb(255 255 255 / 5%); /* inferred: ambient particle tint */
+  --theme-overlay: var(--color-background-overlay);
+
+  /* Motion — semantic aliases mapping a UI concern to a raw duration */
+  --motion-hover: var(--duration-fast);
+  --motion-click: var(--duration-instant);
+  --motion-page: var(--duration-page);
+  --motion-chart: var(--duration-slow);
+  --motion-dialog: var(--duration-normal);
+  --motion-theme: var(--duration-theme);
+  --motion-tooltip: var(--duration-fast);
+
+  /* Accessibility */
+  --focus-ring-width: 2px;
+  --focus-ring-color: var(--color-accent-primary);
+  --focus-ring-offset: 2px;
+}
+
+/* Reduced motion (docs/assets/05_MOTION_SYSTEM.md, docs/assets/13) —
+   collapses every duration token to near-zero so consumers that already
+   use these variables for transition-duration get the reduced-motion
+   behavior for free, with no per-component logic required. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0ms;
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
+    --duration-theme: 0ms;
+    --duration-selection: 0ms;
+    --duration-card: 0ms;
+    --duration-panel: 0ms;
+    --duration-page: 0ms;
+    --duration-max: 0ms;
+  }
+}

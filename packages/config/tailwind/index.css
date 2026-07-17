@@ -1,0 +1,59 @@
+/**
+ * Single entry point for the design foundation. Import this once from the
+ * application's global stylesheet:
+ *
+ *   @import "@pit-wall-insight/config/tailwind/index.css";
+ *
+ * Order matters: Tailwind's base/utilities first, then fonts, then the raw
+ * design tokens, then the Tailwind theme bridge that reads them.
+ */
+
+@import "tailwindcss";
+
+/*
+ * Tailwind's automatic content scanning only walks downward from the
+ * consuming app's own source tree — it never crosses into sibling
+ * workspace packages, even ones (like @pit-wall-insight/ui) linked
+ * through node_modules. Without this, any utility class used only inside
+ * a shared package's components (and not also literally typed somewhere
+ * in the app itself) gets silently dropped from the compiled CSS. Add one
+ * `@source` per shared package that ships Tailwind class names.
+ */
+@source "../../ui/src";
+
+@import "./fonts.css";
+@import "./tokens.css";
+@import "./theme.css";
+@import "./constructor-themes.css";
+
+/* ---------------------------------------------------------------------
+ * Base layer — global element defaults driven entirely by tokens.
+ * ------------------------------------------------------------------- */
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--color-background-primary);
+    color: var(--color-text-primary);
+  }
+
+  body {
+    font-family: var(--font-body);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--leading-normal);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    letter-spacing: var(--tracking-display);
+  }
+
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@pit-wall-insight/shared-types",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared TypeScript contracts (API envelope + future domain entities: Driver, Constructor, Race, Lap, Telemetry, PitStop, ...) used by the frontend and, indirectly, the API contract the backend follows.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "lint": "eslint . --no-error-on-unmatched-pattern",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "clean": "rm -rf dist .turbo"
+  },
+  "devDependencies": {
+    "@pit-wall-insight/config": "workspace:*",
+    "typescript": "^6.0.3"
+  }
+}

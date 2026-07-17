@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Pit Wall Insight (Local)",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "pit_wall_insight_raw",
+      "Username": "pitwall",
+      "SSLMode": "prefer",
+      "Comment": "Preconfigured connection to the local Docker Compose Postgres instance. Password is entered manually on first connect."
+    }
+  }
+}
