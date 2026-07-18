@@ -14,6 +14,8 @@ export function buildCategoryAxes(
   categories: readonly (string | number)[],
   xAxisLabel?: string,
   yAxisLabel?: string,
+  /** Inverts the y-axis — for position charts, where P1 belongs at the top. */
+  yAxisInverse?: boolean,
 ): Pick<EChartsOption, "xAxis" | "yAxis" | "grid"> {
   return {
     grid: { left: 48, right: 16, top: 24, bottom: 40, containLabel: true },
@@ -29,6 +31,7 @@ export function buildCategoryAxes(
     },
     yAxis: {
       type: "value",
+      inverse: yAxisInverse ?? false,
       ...(yAxisLabel !== undefined && { name: yAxisLabel }),
       nameTextStyle: AXIS_LABEL_STYLE(theme),
       axisLine: { show: false },

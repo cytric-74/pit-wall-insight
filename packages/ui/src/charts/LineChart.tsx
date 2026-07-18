@@ -22,6 +22,8 @@ export interface CategoryChartProps {
   xAxisLabel?: string;
   yAxisLabel?: string;
   valueFormatter?: (value: number) => string;
+  /** Inverts the y-axis — for position charts, where P1 belongs at the top. */
+  yAxisInverse?: boolean;
 }
 
 export interface LineChartProps extends CategoryChartProps {
@@ -45,6 +47,7 @@ export function LineChart({
   xAxisLabel,
   yAxisLabel,
   valueFormatter,
+  yAxisInverse,
   smooth = false,
 }: LineChartProps) {
   const theme = useChartTheme();
@@ -53,7 +56,7 @@ export function LineChart({
 
   const option = useMemo<EChartsOption>(
     () => ({
-      ...buildCategoryAxes(theme, categories, xAxisLabel, yAxisLabel),
+      ...buildCategoryAxes(theme, categories, xAxisLabel, yAxisLabel, yAxisInverse),
       ...(legend !== undefined && { legend }),
       tooltip: buildTooltip(theme, "axis", valueFormatter),
       series: series.map((item, index) => ({
@@ -68,7 +71,17 @@ export function LineChart({
         emphasis: { focus: "series" as const },
       })),
     }),
-    [theme, categories, series, xAxisLabel, yAxisLabel, valueFormatter, smooth, legend],
+    [
+      theme,
+      categories,
+      series,
+      xAxisLabel,
+      yAxisLabel,
+      valueFormatter,
+      yAxisInverse,
+      smooth,
+      legend,
+    ],
   );
 
   return (

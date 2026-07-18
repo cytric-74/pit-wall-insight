@@ -40,16 +40,7 @@ export const SAMPLE_STINT_LAPS: readonly string[] = Array.from(
   (_, i) => `Lap ${i + 1}`,
 );
 
-export const SAMPLE_ROUNDS: readonly string[] = [
-  "BHR",
-  "SAU",
-  "AUS",
-  "JPN",
-  "CHN",
-  "MIA",
-  "EMI",
-  "MON",
-];
+export { SAMPLE_ROUNDS } from "../../constants/season.js";
 
 export const SAMPLE_DRIVERS: readonly DriverProfile[] = [
   {

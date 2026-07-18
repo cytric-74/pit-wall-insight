@@ -2,7 +2,9 @@ import { createBrowserRouter } from "react-router";
 import type { ReactElement } from "react";
 
 import { NAV_ITEMS } from "../constants/navigation.js";
+import { ConstructorIntelligencePage } from "../features/constructors/ConstructorIntelligencePage.js";
 import { DriverDossierPage } from "../features/drivers/DriverDossierPage.js";
+import { RacePlaybackPage } from "../features/races/RacePlaybackPage.js";
 import { RootLayout } from "../layouts/RootLayout.js";
 import { MissionControlPage } from "./MissionControlPage.js";
 import { RouteholderPage } from "./RouteholderPage.js";
@@ -11,6 +13,8 @@ import { RouteholderPage } from "./RouteholderPage.js";
 const IMPLEMENTED_PAGES: Record<string, ReactElement> = {
   "/": <MissionControlPage />,
   "/drivers": <DriverDossierPage />,
+  "/constructors": <ConstructorIntelligencePage />,
+  "/races": <RacePlaybackPage />,
 };
 
 export const router = createBrowserRouter([

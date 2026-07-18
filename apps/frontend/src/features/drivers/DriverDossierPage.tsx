@@ -109,6 +109,7 @@ export function DriverDossierPage() {
               categories={SAMPLE_ROUNDS}
               series={[{ name: driver.abbreviation, data: driver.racePositions, ...primaryColor }]}
               yAxisLabel="Finish"
+              yAxisInverse
               valueFormatter={(value) => `P${value}`}
               ariaLabel={`${driver.name} finishing position progression, sample data`}
             />

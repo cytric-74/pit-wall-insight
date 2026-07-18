@@ -20,13 +20,14 @@ export function BarChart({
   xAxisLabel,
   yAxisLabel,
   valueFormatter,
+  yAxisInverse,
 }: CategoryChartProps) {
   const theme = useChartTheme();
   const legend = buildLegend(theme, series.length);
 
   const option = useMemo<EChartsOption>(
     () => ({
-      ...buildCategoryAxes(theme, categories, xAxisLabel, yAxisLabel),
+      ...buildCategoryAxes(theme, categories, xAxisLabel, yAxisLabel, yAxisInverse),
       ...(legend !== undefined && { legend }),
       tooltip: buildTooltip(theme, "axis", valueFormatter),
       series: series.map((item, index) => ({
@@ -39,7 +40,7 @@ export function BarChart({
         emphasis: { itemStyle: { opacity: 0.85 } },
       })),
     }),
-    [theme, categories, series, xAxisLabel, yAxisLabel, valueFormatter, legend],
+    [theme, categories, series, xAxisLabel, yAxisLabel, valueFormatter, yAxisInverse, legend],
   );
 
   return (
