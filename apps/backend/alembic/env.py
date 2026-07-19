@@ -13,12 +13,14 @@ from logging.config import fileConfig
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
+# Importing app.models populates Base.metadata as a side effect (see that
+# package's docstring) — required for autogenerate to see every table, and
+# for `run_migrations_offline`/`run_migrations_online` below to have a
+# complete `target_metadata` to diff or emit DDL from.
+import app.models  # noqa: F401
 from alembic import context
 from app.core.config import get_settings
 from app.database.session import Base
-
-# Import model modules here as they're created so Alembic's autogenerate
-# can see them, e.g.: `from app.models import driver  # noqa: F401`
 
 config = context.config
 

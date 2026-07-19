@@ -1,0 +1,39 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+# E501: line length is enforced by the formatter, not the linter.
+# UP047: PEP 695 generic syntax (`def f[T](...)`) requires the interpreter
+# *running* mypy/ruff to itself be 3.12+ to parse; this project's available
+# toolchain is 3.11, so `TypeVar` is used instead (see validators/validate.py).
+ignore = ["E501", "UP047"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["collectors", "validators", "utils", "config", "scheduler"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+# fastf1 ships no py.typed marker / type stubs of its own.
+module = "fastf1.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --strict-markers -m \"not network\""
+testpaths = ["tests"]
+markers = [
+  "network: makes a real call to FastF1/Jolpica; excluded from the default run, opt in with `-m network`.",
+]
+
+[tool.coverage.run]
+# Collectors and validators are exercised through both unit tests (mocked)
+# and the opt-in network test; coverage from the default (mocked) run alone
+# is intentionally not the full picture, so this project doesn't gate on it.
+source = ["."]
+omit = ["tests/*"]

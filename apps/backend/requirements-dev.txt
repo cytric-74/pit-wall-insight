@@ -6,3 +6,7 @@ pytest==9.1.1
 pytest-asyncio==1.4.0
 pytest-cov==7.1.0
 httpx==0.28.1
+# Async SQLite driver, used only in tests/test_raw_models.py to create the
+# raw-layer schema against a real (in-memory) database — no Docker/Postgres
+# needed to verify the ORM models produce working DDL.
+aiosqlite==0.21.0

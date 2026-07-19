@@ -1,0 +1,17 @@
+# Phase 1 (ingestion foundation) + Phase 2 (bronze persistence) dependencies.
+fastf1==3.8.3
+requests==2.32.3
+pydantic==2.13.4
+pydantic-settings==2.14.2
+# fastf1 already depends on pandas transitively (session/lap/telemetry data
+# is returned as DataFrames); listed directly here because
+# collectors/fastf1_client.py imports it directly to flatten those frames.
+pandas>=2.0,<3.0
+# Sync SQLAlchemy (no [asyncio] extra): this is a batch CLI pipeline, not a
+# concurrent web server, so there's no benefit to async DB access here —
+# unlike apps/backend, which needs it to serve concurrent HTTP requests.
+sqlalchemy==2.0.51
+# Sync PostgreSQL driver (psycopg 3), pairing with the plain `sqlalchemy`
+# dependency above. apps/backend uses asyncpg instead, for the same reason
+# it uses SQLAlchemy's async engine.
+psycopg[binary]==3.2.10
