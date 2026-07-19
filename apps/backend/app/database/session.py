@@ -1,8 +1,13 @@
-"""SQLAlchemy 2.0 async engine, session factory, and declarative base.
+"""SQLAlchemy 2.0 async engines, session factories, and declarative bases.
 
-No ORM models are defined yet — `app/models/` is intentionally empty until
-the first domain model is designed. This module only wires up the plumbing
-those models will eventually attach to.
+Two of each — one per physical database (raw/bronze, analytics/gold) — so
+`app/models/raw/*.py` and `app/models/gold/*.py` each attach to the
+metadata for the database they actually belong to. Mixing them into one
+`Base`/`metadata` would let Alembic's autogenerate (or `create_all`) try to
+create Bronze tables in the Gold database or vice versa; keeping them
+separate is what makes `alembic/` (raw) and `alembic_gold/` (gold) two
+independent migration histories, matching docs/06_DATA_ENGINEERING.md
+Decision 005 ("API Reads Only Gold Models").
 """
 
 from __future__ import annotations
@@ -42,7 +47,18 @@ AnalyticsAsyncSessionLocal = async_sessionmaker(
 
 
 class Base(DeclarativeBase):
-    """Declarative base every future ORM model (`app/models/`) will inherit from."""
+    """Declarative base for every Bronze (`raw_*`) model (`app/models/raw/`)."""
+
+
+class GoldBase(DeclarativeBase):
+    """Declarative base for every Gold (`dim_*`/`fct_*`) model (`app/models/gold/`).
+
+    A separate class (not just a second `metadata`) because SQLAlchemy
+    resolves relationships/foreign keys within one declarative base's
+    registry — Gold models reference each other (e.g. `FctResult.driver_id`
+    -> `DimDriver.driver_id`) and must never accidentally resolve against a
+    Bronze table of a similar name.
+    """
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:

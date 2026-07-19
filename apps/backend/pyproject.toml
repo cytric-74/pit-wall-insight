@@ -13,6 +13,16 @@ known-first-party = ["app"]
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
+# `alembic/env.py` and `alembic_gold/env.py` share a basename with no
+# `__init__.py` in either directory (required — see that reasoning in
+# alembic_gold/env.py's docstring: adding one would make the local
+# `alembic/` directory shadow the real third-party `alembic` package at
+# import time). Without one, mypy can't tell the two `env` modules apart
+# and reports a duplicate-module error; excluding the gold copy (a near-
+# identical file to the already-checked raw one, differing only in which
+# settings/metadata it points at) is the standard workaround for this
+# specific mypy/no-`__init__.py` combination.
+exclude = ["^alembic_gold/env\\.py$"]
 
 [[tool.mypy.overrides]]
 module = "app.exceptions.handlers"

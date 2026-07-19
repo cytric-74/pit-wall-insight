@@ -1,16 +1,34 @@
 """SQLAlchemy ORM models.
 
-Re-exports every model so `Base.metadata` (see `app/database/session.py`)
-sees the full schema as soon as `app.models` is imported anywhere — Alembic
-autogenerate, `Base.metadata.create_all()` in tests, and any future code all
-rely on that side effect rather than each having to remember which model
-modules to import individually.
+Re-exports every model so `Base.metadata`/`GoldBase.metadata` (see
+`app/database/session.py`) see the full schema as soon as `app.models` is
+imported anywhere — Alembic autogenerate (both `alembic/` for raw and
+`alembic_gold/` for gold), `Base.metadata.create_all()`/
+`GoldBase.metadata.create_all()` in tests, and any future code all rely on
+that side effect rather than each having to remember which model modules
+to import individually.
 
-Currently only the Bronze/raw layer (`app/models/raw/`) exists — see
-docs/07_DATABASE_SCHEMA.md for the planned Gold layer (`dim_*`/`fct_*`/
-`mart_*`), which is a future phase.
+Raw (`app/models/raw/`) and Gold (`app/models/gold/`) models attach to two
+separate declarative bases with two separate `metadata` objects, even
+though both are imported here — importing this module is what makes
+either metadata "complete," but which of the two a given Alembic
+environment or test actually acts on depends on which `Base` it reads
+(see `alembic/env.py` vs `alembic_gold/env.py`).
+
+Marts (`mart_*`) remain a future phase — see docs/07_DATABASE_SCHEMA.md.
 """
 
+from app.models.gold import (
+    DimCircuit,
+    DimConstructor,
+    DimDriver,
+    DimSeason,
+    DimSession,
+    DimWeather,
+    FctLap,
+    FctPitstop,
+    FctResult,
+)
 from app.models.raw import (
     RawCircuit,
     RawConstructor,
@@ -22,6 +40,15 @@ from app.models.raw import (
 )
 
 __all__ = [
+    "DimCircuit",
+    "DimConstructor",
+    "DimDriver",
+    "DimSeason",
+    "DimSession",
+    "DimWeather",
+    "FctLap",
+    "FctPitstop",
+    "FctResult",
     "RawCircuit",
     "RawConstructor",
     "RawDriver",

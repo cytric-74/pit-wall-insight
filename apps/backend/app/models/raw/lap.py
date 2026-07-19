@@ -20,7 +20,7 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.session import Base
-from app.models.raw.mixins import AuditMixin
+from app.models.mixins import AuditMixin
 
 
 class RawLap(Base, AuditMixin):

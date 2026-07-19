@@ -62,9 +62,10 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-from sqlalchemy import Column, MetaData, Table, Uuid, create_engine, func
+from sqlalchemy import Column, Table, Uuid, create_engine
 from sqlalchemy.engine import Engine
 
+from utils.db import reflect_table, upsert
 from utils.ids import generate_id
 from validators.schema import (
     RawConstructorRef,
@@ -91,19 +92,13 @@ def create_bronze_engine(database_url: str) -> Engine:
 def _reflect_table(engine: Engine, name: str) -> Table:
     """Reflect a `raw_*` table's structure from the live database.
 
-    See the module docstring for why `id` is passed as an explicit
-    override column rather than left to plain reflection. A fresh
-    `MetaData()` is used per call (rather than one shared instance) so
-    repeated calls for the same table name within one process can never
-    collide with an already-registered `Table` of that name.
+    Thin wrapper around `utils.db.reflect_table`, fixing the override to
+    Bronze's universal `id` primary key column — see that function's
+    docstring for why the override is needed at all, and
+    `transformers/bronze_to_gold.py` for the Gold-side equivalent, which
+    needs a different override per table (entity-specific PK/FK names).
     """
-    metadata = MetaData()
-    return Table(
-        name,
-        metadata,
-        Column("id", Uuid(), primary_key=True),
-        autoload_with=engine,
-    )
+    return reflect_table(engine, name, Column("id", Uuid(), primary_key=True))
 
 
 def _upsert(
@@ -111,63 +106,11 @@ def _upsert(
 ) -> int:
     """Insert `rows` into `table`, updating in place on a natural-key conflict.
 
-    Inputs: `rows` — plain dicts keyed by column name (must include `id`,
-    `source`, `pipeline_version`, and every data column the target table
-    expects; `created_at`/`updated_at` are deliberately omitted here — see
-    below). `conflict_columns` — the column names forming the table's
-    natural-key unique constraint (e.g. `["driver_id"]`,
-    `["source", "season", "round_number"]`).
-
-    Outputs: the number of rows submitted (not necessarily the number of
-    *new* rows created, since some may have updated an existing row).
-
-    Why `updated_at` is set explicitly here rather than left to the
-    column's `onupdate=func.now()`: that behavior is implemented by
-    SQLAlchemy's ORM/Core `Table.update()` construct, not by
-    `insert().on_conflict_do_update()` — the latter requires every column
-    that should change on conflict to be named explicitly in `set_`. This
-    function does that for every column except `id` and `created_at`,
-    which must never change once a row exists, and adds `updated_at` itself
-    since nothing else would set it on the update path.
-
-    Time complexity: O(1) round trip regardless of `len(rows)` — every row
-    is submitted in a single multi-row `INSERT`, not one statement per row,
-    since re-running this pipeline is expected to submit thousands of rows
-    (e.g. a full session's lap data) per call.
+    Thin wrapper around `utils.db.upsert` — see that function's docstring
+    for the full contract (idempotent upsert semantics, why `updated_at`
+    is set explicitly, time complexity).
     """
-    if not rows:
-        return 0
-
-    # `postgresql.insert` and `sqlite.insert` return dialect-specific `Insert`
-    # subclasses with incompatible static types (mypy cannot unify them under
-    # one local name), even though both expose an identical
-    # `.on_conflict_do_update(...)` API at runtime — hence `Any` here rather
-    # than a precise type for `dialect_insert`/`statement`.
-    dialect = engine.dialect.name
-    dialect_insert: Any
-    if dialect == "postgresql":
-        from sqlalchemy.dialects.postgresql import insert as dialect_insert
-    elif dialect == "sqlite":
-        from sqlalchemy.dialects.sqlite import insert as dialect_insert
-    else:
-        raise NotImplementedError(
-            f"bronze_loader upserts are only implemented for postgresql and sqlite, got {dialect!r}"
-        )
-
-    statement = dialect_insert(table).values(rows)
-    update_values: dict[str, Any] = {
-        column.name: column
-        for column in statement.excluded
-        if column.name not in {"id", "created_at", *conflict_columns}
-    }
-    update_values["updated_at"] = func.now()
-    statement = statement.on_conflict_do_update(
-        index_elements=conflict_columns, set_=update_values
-    )
-
-    with engine.begin() as connection:
-        connection.execute(statement)
-    return len(rows)
+    return upsert(engine, table, rows, conflict_columns)
 
 
 # ---------------------------------------------------------------------------
@@ -371,6 +314,8 @@ def upsert_results_fastf1(
             "points": result.Points,
             "status": result.Status,
             "grid_position": result.GridPosition,
+            "driver_code": result.Abbreviation,
+            "constructor_ref": result.TeamName,
         }
         for result in results
     ]
@@ -402,6 +347,10 @@ def upsert_results_jolpica(
             "points": float(result.points),
             "status": result.status,
             "grid_position": float(result.grid),
+            # No `driver_code` needed: `driver_ref` already *is* the Jolpica
+            # `driverId` that `raw_drivers.driver_id` is keyed on directly.
+            "driver_code": None,
+            "constructor_ref": result.Constructor.constructorId,
         }
         for result in results
     ]

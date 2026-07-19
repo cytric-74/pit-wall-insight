@@ -134,6 +134,8 @@ def _build_test_schema() -> MetaData:
         Column("points", Float()),
         Column("status", String()),
         Column("grid_position", Float()),
+        Column("driver_code", String()),
+        Column("constructor_ref", String()),
         UniqueConstraint("source", "season", "round_number", "session_type", "driver_ref"),
     )
     Table(
@@ -393,6 +395,8 @@ class TestUpsertResults:
         assert row["driver_ref"] == "1"
         assert row["session_type"] == "R"
         assert row["source"] == "fastf1"
+        assert row["driver_code"] == "VER"
+        assert row["constructor_ref"] == "Red Bull"
 
     def test_upsert_results_jolpica_always_uses_session_type_r(self, engine: Engine) -> None:
         result = RawRaceResult(
@@ -426,6 +430,8 @@ class TestUpsertResults:
         assert row["driver_ref"] == "max_verstappen"
         assert row["session_type"] == "R"
         assert row["source"] == "jolpica"
+        assert row["driver_code"] is None
+        assert row["constructor_ref"] == "red_bull"
 
 
 class TestUpsertLapsAndWeather:

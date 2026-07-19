@@ -6,10 +6,23 @@ Both FastF1 session results (`RawSessionResult`) and Jolpica race results
 rather than a foreign key into `RawDriver`: FastF1 identifies a driver by
 `DriverNumber` (e.g. `"1"`) and Jolpica by `driverId` (e.g.
 `"max_verstappen"`) — two different identifier systems that this Bronze
-table does not attempt to reconcile. A future Gold-layer transform is
-where "which `RawDriver` row does this `driver_ref` actually mean" gets
-resolved, once both sources' naming can be cross-referenced against known
-mappings.
+table does not attempt to reconcile.
+
+`driver_code` and `constructor_ref` (added in migration
+`a1f2c9e6d3b7_add_raw_results_driver_code_and_constructor_ref.py`, once the
+Gold-layer transform needed them) exist purely to make that reconciliation
+*possible* for a future consumer, without this table performing it itself:
+
+- `driver_code`: FastF1's `Abbreviation` (e.g. `"VER"`) — matches
+  `RawDriver.code` exactly, giving the Gold transform a reliable join key
+  from a FastF1-sourced row back to `RawDriver` (whose `driver_id` natural
+  key is Jolpica's `driverId`, which FastF1 rows have no direct equivalent
+  of). `None` for Jolpica-sourced rows, since `driver_ref` already *is*
+  `driverId` there — no reconciliation needed.
+- `constructor_ref`: the team, as each source names it — Jolpica's
+  `constructorId` (stable, exact-matches `RawConstructor.constructor_id`)
+  or FastF1's `TeamName` (free text, no stable id at the results level;
+  reconciling it is a best-effort string match, not an exact key).
 """
 
 from __future__ import annotations
@@ -18,7 +31,7 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.session import Base
-from app.models.raw.mixins import AuditMixin
+from app.models.mixins import AuditMixin
 
 
 class RawResult(Base, AuditMixin):
@@ -45,3 +58,5 @@ class RawResult(Base, AuditMixin):
     points: Mapped[float | None] = mapped_column(nullable=True)
     status: Mapped[str | None] = mapped_column(nullable=True)
     grid_position: Mapped[float | None] = mapped_column(nullable=True)
+    driver_code: Mapped[str | None] = mapped_column(nullable=True)
+    constructor_ref: Mapped[str | None] = mapped_column(nullable=True)

@@ -176,6 +176,8 @@ async def test_raw_result_round_trips(session_factory: async_sessionmaker[AsyncS
         points=25.0,
         status="Finished",
         grid_position=1.0,
+        driver_code="VER",
+        constructor_ref="Red Bull Racing",
     )
     async with session_factory() as session:
         session.add(result)
@@ -185,6 +187,8 @@ async def test_raw_result_round_trips(session_factory: async_sessionmaker[AsyncS
         fetched = await session.get(RawResult, result.id)
         assert fetched is not None
         assert fetched.points == 25.0
+        assert fetched.driver_code == "VER"
+        assert fetched.constructor_ref == "Red Bull Racing"
 
 
 async def test_raw_lap_round_trips_with_pit_stop_columns(

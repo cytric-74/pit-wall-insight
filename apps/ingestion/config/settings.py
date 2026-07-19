@@ -90,6 +90,16 @@ class Settings(BaseSettings):
     # sync `psycopg` driver in requirements.txt.
     database_url: str = "postgresql://pitwall:pitwall@localhost:5432/pit_wall_insight_raw"
 
+    # --- Analytics/Gold database (docs/06_DATA_ENGINEERING.md Decision 005:
+    # "API Reads Only Gold Models") — where
+    # `transformers/bronze_to_gold.py` writes. Same connection string
+    # apps/backend's `ANALYTICS_DATABASE_URL` resolves to, again as a plain
+    # `postgresql://` URL rather than backend's `+asyncpg` variant, for the
+    # same sync-engine reason as `database_url` above.
+    analytics_database_url: str = (
+        "postgresql://pitwall:pitwall@localhost:5432/pit_wall_insight_analytics"
+    )
+
     # --- Pipeline metadata (docs/06_DATA_ENGINEERING.md "Metadata") ---
     # Stamped onto every record this pipeline persists, so any row in the
     # warehouse can be traced back to the exact pipeline version that
