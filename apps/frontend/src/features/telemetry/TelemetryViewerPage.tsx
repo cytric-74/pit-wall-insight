@@ -3,10 +3,12 @@ import {
   Badge,
   BarChart,
   Container,
+  convertSpeed,
   getConstructorTheme,
   Hero,
   LineChart,
   Select,
+  usePreferences,
   Widget,
   WidgetGrid,
 } from "@pit-wall-insight/ui";
@@ -34,20 +36,37 @@ const DEFAULT_SESSION_ID = SAMPLE_TELEMETRY_SESSIONS[0]!.id;
  * (docs/assets/06_CHART_DESIGN_SYSTEM.md): the first driver's line uses
  * their constructor color, the second falls back to the chart theme's
  * neutral secondary tone rather than their own team color.
+ *
+ * Speed is stored in km/h and converted at render time via the
+ * Settings page's speed-unit preference (`usePreferences`).
  */
 export function TelemetryViewerPage() {
   const [sessionId, setSessionId] = useState<string>(DEFAULT_SESSION_ID);
   const session = getSampleSession(sessionId) ?? SAMPLE_TELEMETRY_SESSIONS[0]!;
   const [driverA, driverB] = session.drivers;
   const driverATheme = getConstructorTheme(driverA.constructorId);
+  const { preferences } = usePreferences();
+  const speedUnitLabel = preferences.speedUnit === "mph" ? "mph" : "km/h";
 
-  const channelSeries = (channel: "speed" | "throttle" | "brake" | "rpm" | "gear") => [
+  const channelSeries = (channel: "throttle" | "brake" | "rpm" | "gear") => [
     {
       name: driverA.abbreviation,
       data: driverA[channel],
       ...(driverATheme ? { color: driverATheme.primary } : {}),
     },
     { name: driverB.abbreviation, data: driverB[channel] },
+  ];
+
+  const speedSeries = [
+    {
+      name: driverA.abbreviation,
+      data: driverA.speed.map((value) => convertSpeed(value, preferences.speedUnit)),
+      ...(driverATheme ? { color: driverATheme.primary } : {}),
+    },
+    {
+      name: driverB.abbreviation,
+      data: driverB.speed.map((value) => convertSpeed(value, preferences.speedUnit)),
+    },
   ];
 
   return (
@@ -57,7 +76,13 @@ export function TelemetryViewerPage() {
         title={`${session.sessionName} · ${session.circuit}`}
         description={`${driverA.driver} vs ${driverB.driver} · Lap ${session.lapNumber} · ${session.compound}`}
         stats={[
-          { label: "Top speed", value: String(session.summary.topSpeed), unit: "km/h" },
+          {
+            label: "Top speed",
+            value: String(
+              Math.round(convertSpeed(session.summary.topSpeed, preferences.speedUnit)),
+            ),
+            unit: speedUnitLabel,
+          },
           { label: "Avg throttle", value: String(session.summary.averageThrottle), unit: "%" },
           { label: "Avg brake", value: String(session.summary.averageBrake), unit: "%" },
           { label: "Top RPM", value: session.summary.topRpm.toLocaleString() },
@@ -87,10 +112,10 @@ export function TelemetryViewerPage() {
           >
             <LineChart
               categories={DISTANCE_MARKERS}
-              series={channelSeries("speed")}
+              series={speedSeries}
               xAxisLabel="Distance"
-              yAxisLabel="km/h"
-              valueFormatter={(value) => `${value} km/h`}
+              yAxisLabel={speedUnitLabel}
+              valueFormatter={(value) => `${Math.round(value)} ${speedUnitLabel}`}
               ariaLabel={`${session.sessionName} speed trace, sample data`}
               height={360}
             />

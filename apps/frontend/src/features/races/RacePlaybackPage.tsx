@@ -3,10 +3,12 @@ import {
   Badge,
   BarChart,
   Container,
+  convertTemperature,
   getConstructorTheme,
   Hero,
   LineChart,
   Select,
+  usePreferences,
   Widget,
   WidgetGrid,
 } from "@pit-wall-insight/ui";
@@ -32,6 +34,9 @@ const DEFAULT_RACE_ID = SAMPLE_RACES[0]!.id;
  * Each driver's line keeps their own constructor's color (per-series
  * override, same approach as Driver Dossier) rather than the global
  * theme, since a single race mixes drivers from several teams.
+ *
+ * Track temperature is stored in °C and converted at render time via
+ * the Settings page's temperature-unit preference (`usePreferences`).
  */
 export function RacePlaybackPage() {
   const [raceId, setRaceId] = useState<string>(DEFAULT_RACE_ID);
@@ -39,6 +44,8 @@ export function RacePlaybackPage() {
   const finalClassification = [...race.drivers].sort(
     (a, b) => a.positions[a.positions.length - 1]! - b.positions[b.positions.length - 1]!,
   );
+  const { preferences } = usePreferences();
+  const temperatureUnitLabel = preferences.temperatureUnit === "fahrenheit" ? "°F" : "°C";
 
   return (
     <>
@@ -96,9 +103,16 @@ export function RacePlaybackPage() {
           >
             <AreaChart
               categories={SAMPLE_RACE_LAPS}
-              series={[{ name: "Track temp", data: race.trackTemperature }]}
-              yAxisLabel="°C"
-              valueFormatter={(value) => `${value}°C`}
+              series={[
+                {
+                  name: "Track temp",
+                  data: race.trackTemperature.map((value) =>
+                    convertTemperature(value, preferences.temperatureUnit),
+                  ),
+                },
+              ]}
+              yAxisLabel={temperatureUnitLabel}
+              valueFormatter={(value) => `${Math.round(value)}${temperatureUnitLabel}`}
               ariaLabel={`${race.name} track temperature evolution, sample data`}
             />
           </Widget>

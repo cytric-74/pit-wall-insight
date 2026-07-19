@@ -7,4 +7,5 @@
 
 export * from "./Input.js";
 export * from "./Select.js";
+export * from "./Switch.js";
 export * from "./Textarea.js";

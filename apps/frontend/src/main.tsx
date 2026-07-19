@@ -5,7 +5,7 @@ import { RouterProvider } from "react-router";
 
 import { router } from "./routes/router.js";
 import "./styles/globals.css";
-import { ThemeProvider } from "./themes/index.js";
+import { PreferencesProvider, ThemeProvider } from "./themes/index.js";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -14,10 +14,12 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <ThemeProvider>
-      <TooltipProvider>
-        <RouterProvider router={router} />
-      </TooltipProvider>
-    </ThemeProvider>
+    <PreferencesProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <RouterProvider router={router} />
+        </TooltipProvider>
+      </ThemeProvider>
+    </PreferencesProvider>
   </StrictMode>,
 );

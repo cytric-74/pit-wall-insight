@@ -374,3 +374,30 @@
     --duration-max: 0ms;
   }
 }
+
+/* Manual reduced-motion override (Settings -> Animation, PreferencesProvider's
+   `data-motion` attribute) — mirrors the media query above so the in-app
+   setting behaves identically to the OS-level signal for every consumer
+   already built on duration tokens. */
+:root[data-motion="reduced"] {
+  --duration-instant: 0ms;
+  --duration-fast: 0ms;
+  --duration-normal: 0ms;
+  --duration-slow: 0ms;
+  --duration-theme: 0ms;
+  --duration-selection: 0ms;
+  --duration-card: 0ms;
+  --duration-panel: 0ms;
+  --duration-page: 0ms;
+  --duration-max: 0ms;
+}
+
+/* High contrast (Settings -> Accessibility, PreferencesProvider's
+   `data-contrast` attribute) — strengthens existing neutral tokens rather
+   than introducing new colors, keeping with "themes personalize, never
+   redesign" (docs/assets/12_THEME_ENGINE.md) applied to accessibility too. */
+:root[data-contrast="high"] {
+  --color-text-muted: var(--color-text-secondary);
+  --color-border-subtle: var(--color-border-default);
+  --color-border-default: var(--color-border-hover);
+}
