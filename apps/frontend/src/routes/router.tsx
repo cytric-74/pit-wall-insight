@@ -6,6 +6,7 @@ import { CircuitExplorerPage } from "../features/circuits/CircuitExplorerPage.js
 import { ConstructorIntelligencePage } from "../features/constructors/ConstructorIntelligencePage.js";
 import { DriverDossierPage } from "../features/drivers/DriverDossierPage.js";
 import { RacePlaybackPage } from "../features/races/RacePlaybackPage.js";
+import { StrategyLabPage } from "../features/strategy/StrategyLabPage.js";
 import { TelemetryViewerPage } from "../features/telemetry/TelemetryViewerPage.js";
 import { RootLayout } from "../layouts/RootLayout.js";
 import { MissionControlPage } from "./MissionControlPage.js";
@@ -19,6 +20,7 @@ const IMPLEMENTED_PAGES: Record<string, ReactElement> = {
   "/races": <RacePlaybackPage />,
   "/circuits": <CircuitExplorerPage />,
   "/telemetry": <TelemetryViewerPage />,
+  "/strategy": <StrategyLabPage />,
 };
 
 export const router = createBrowserRouter([
