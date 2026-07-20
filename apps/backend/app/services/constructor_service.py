@@ -8,8 +8,9 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions.base import NotFoundError
-from app.models import DimConstructor
+from app.models import DimConstructor, MartConstructorSummary
 from app.repositories import constructor_repository
+from app.schemas.compare import ConstructorComparison, ConstructorComparisonEntry
 from app.schemas.constructor import (
     Constructor,
     ConstructorCareerStatistics,
@@ -112,4 +113,61 @@ async def get_career_statistics(
         podiums=sum(summary.podiums for summary in summaries),
         average_points=_mean([summary.average_points for summary in summaries]),
         dnf_rate=_mean([summary.dnf_rate for summary in summaries]),
+    )
+
+
+def _comparison_entry(name: str, summary: MartConstructorSummary) -> ConstructorComparisonEntry:
+    return ConstructorComparisonEntry(
+        constructor=name,
+        wins=summary.wins,
+        podiums=summary.podiums,
+        pitstop_average=summary.pitstop_average,
+        strategy_success=summary.strategy_success,
+        average_points=summary.average_points,
+        dnf_rate=summary.dnf_rate,
+        development_index=summary.development_index,
+        average_pace=summary.average_pace,
+    )
+
+
+async def compare_constructors(
+    session: AsyncSession,
+    constructor_a_id: uuid.UUID,
+    constructor_b_id: uuid.UUID,
+    *,
+    season: int | None,
+) -> ConstructorComparison:
+    constructor_a = await _get_constructor_or_404(session, constructor_a_id)
+    constructor_b = await _get_constructor_or_404(session, constructor_b_id)
+
+    rows_a = await constructor_repository.list_season_summaries_for_constructor(
+        session, constructor_a_id
+    )
+    rows_b = await constructor_repository.list_season_summaries_for_constructor(
+        session, constructor_b_id
+    )
+    summaries_a = {row.season: row.MartConstructorSummary for row in rows_a}
+    summaries_b = {row.season: row.MartConstructorSummary for row in rows_b}
+
+    if season is not None:
+        resolved_season = season
+    else:
+        common_seasons = set(summaries_a) & set(summaries_b)
+        if not common_seasons:
+            raise NotFoundError(
+                f"No season with data for both "
+                f"{constructor_a.team_name} and {constructor_b.team_name}."
+            )
+        resolved_season = max(common_seasons)
+
+    if resolved_season not in summaries_a or resolved_season not in summaries_b:
+        raise NotFoundError(
+            f"Season {resolved_season} has no data for both "
+            f"{constructor_a.team_name} and {constructor_b.team_name}."
+        )
+
+    return ConstructorComparison(
+        season=resolved_season,
+        constructor_a=_comparison_entry(constructor_a.team_name, summaries_a[resolved_season]),
+        constructor_b=_comparison_entry(constructor_b.team_name, summaries_b[resolved_season]),
     )

@@ -60,3 +60,33 @@ async def test_get_career_statistics_reflects_available_seasons(
     assert stats.seasons_competed == 1
     assert stats.wins == 2
     assert stats.average_points == 25.0
+
+
+async def test_compare_constructors_defaults_to_the_latest_common_season(
+    analytics_session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    seeded = await seed_2024_two_race_season(analytics_session_factory)
+    await seed_driver_and_constructor_stats(analytics_session_factory, seeded)
+
+    async with analytics_session_factory() as session:
+        comparison = await constructor_service.compare_constructors(
+            session, seeded.red_bull_id, seeded.ferrari_id, season=None
+        )
+
+    assert comparison.season == 2024
+    assert comparison.constructor_a.constructor == "Red Bull Racing"
+    assert comparison.constructor_a.wins == 2
+    assert comparison.constructor_b.constructor == "Ferrari"
+    assert comparison.constructor_b.wins == 0
+
+
+async def test_compare_constructors_raises_not_found_when_no_season_is_shared(
+    analytics_session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    seeded = await seed_2024_two_race_season(analytics_session_factory)
+
+    async with analytics_session_factory() as session:
+        with pytest.raises(NotFoundError):
+            await constructor_service.compare_constructors(
+                session, seeded.red_bull_id, seeded.ferrari_id, season=None
+            )

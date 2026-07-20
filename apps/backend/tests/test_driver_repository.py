@@ -138,7 +138,7 @@ async def test_list_laps_for_driver_filters_by_compound(
             compound="SOFT",
         )
 
-    assert len(all_laps) == 2
-    assert len(soft_laps) == 1
+    assert len(all_laps) == 4
+    assert len(soft_laps) == 2
     assert soft_laps[0].compound == "SOFT"
     assert soft_laps[0].race_name == "Bahrain Grand Prix"

@@ -64,7 +64,7 @@ async def test_get_driver_laps_supports_compound_filter(
 
     assert response.status_code == 200
     body = response.json()
-    assert len(body["data"]) == 1
+    assert len(body["data"]) == 2
     assert body["data"][0]["compound"] == "SOFT"
 
 

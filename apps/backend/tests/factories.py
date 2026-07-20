@@ -20,7 +20,9 @@ from app.models import (
     DimDriver,
     DimSeason,
     DimSession,
+    DimWeather,
     FctLap,
+    FctPitstop,
     FctResult,
     MartConstructorSummary,
     MartDashboard,
@@ -41,6 +43,8 @@ class SeededSeason:
     ferrari_id: uuid.UUID
     bahrain_session_id: uuid.UUID
     jeddah_session_id: uuid.UUID
+    circuit_id: uuid.UUID
+    weather_id: uuid.UUID
 
 
 async def seed_2024_two_race_season(
@@ -57,6 +61,7 @@ async def seed_2024_two_race_season(
     verstappen_id = uuid.uuid4()
     leclerc_id = uuid.uuid4()
     circuit_id = uuid.uuid4()
+    weather_id = uuid.uuid4()
     bahrain_session_id = uuid.uuid4()
     jeddah_session_id = uuid.uuid4()
 
@@ -87,6 +92,20 @@ async def seed_2024_two_race_season(
                 pipeline_version=_PIPELINE_VERSION,
                 name="Bahrain International Circuit",
                 country="Bahrain",
+            )
+        )
+        session.add(
+            DimWeather(
+                weather_id=weather_id,
+                source=_SOURCE,
+                pipeline_version=_PIPELINE_VERSION,
+                air_temperature=24.0,
+                track_temperature=30.0,
+                humidity=40.0,
+                wind_speed=1.0,
+                wind_direction=180.0,
+                rainfall=False,
+                pressure=1008.0,
             )
         )
         session.add_all(
@@ -145,6 +164,7 @@ async def seed_2024_two_race_season(
                     session_type="R",
                     date="2024-03-02",
                     circuit_id=circuit_id,
+                    weather_id=weather_id,
                 ),
                 DimSession(
                     session_id=jeddah_session_id,
@@ -263,6 +283,8 @@ async def seed_2024_two_race_season(
         ferrari_id=ferrari_id,
         bahrain_session_id=bahrain_session_id,
         jeddah_session_id=jeddah_session_id,
+        circuit_id=circuit_id,
+        weather_id=weather_id,
     )
 
 
@@ -287,6 +309,7 @@ async def seed_driver_and_constructor_stats(
                     lap_number=1,
                     lap_time=95.0,
                     compound="SOFT",
+                    tyre_life=1,
                     position=1,
                     pit_in=False,
                     pit_out=False,
@@ -298,13 +321,56 @@ async def seed_driver_and_constructor_stats(
                     driver_id=seeded.verstappen_id,
                     session_id=seeded.bahrain_session_id,
                     lap_number=2,
+                    lap_time=95.4,
+                    compound="SOFT",
+                    tyre_life=2,
+                    position=1,
+                    pit_in=True,
+                    pit_out=False,
+                ),
+                FctLap(
+                    lap_id=uuid.uuid4(),
+                    source=_SOURCE,
+                    pipeline_version=_PIPELINE_VERSION,
+                    driver_id=seeded.verstappen_id,
+                    session_id=seeded.bahrain_session_id,
+                    lap_number=3,
                     lap_time=94.5,
                     compound="HARD",
+                    tyre_life=1,
+                    position=1,
+                    pit_in=False,
+                    pit_out=True,
+                ),
+                FctLap(
+                    lap_id=uuid.uuid4(),
+                    source=_SOURCE,
+                    pipeline_version=_PIPELINE_VERSION,
+                    driver_id=seeded.verstappen_id,
+                    session_id=seeded.bahrain_session_id,
+                    lap_number=4,
+                    lap_time=94.2,
+                    compound="HARD",
+                    tyre_life=2,
                     position=1,
                     pit_in=False,
                     pit_out=False,
                 ),
             ]
+        )
+        session.add(
+            FctPitstop(
+                pitstop_id=uuid.uuid4(),
+                source=_SOURCE,
+                pipeline_version=_PIPELINE_VERSION,
+                driver_id=seeded.verstappen_id,
+                session_id=seeded.bahrain_session_id,
+                lap=2,
+                pit_duration=22.3,
+                stop_number=1,
+                compound_before="SOFT",
+                compound_after="HARD",
+            )
         )
         session.add_all(
             [

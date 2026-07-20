@@ -112,7 +112,7 @@ async def test_get_laps_returns_lap_data_for_a_known_driver(
             compound=None,
         )
 
-    assert len(laps) == 2
+    assert len(laps) == 4
     assert laps[0].lap_number == 1
 
 
