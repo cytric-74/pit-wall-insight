@@ -1,20 +1,57 @@
+import { lazy } from "react";
 import { createBrowserRouter } from "react-router";
 import type { ReactElement } from "react";
 
 import { NAV_ITEMS } from "../constants/navigation.js";
-import { CircuitExplorerPage } from "../features/circuits/CircuitExplorerPage.js";
-import { ConstructorIntelligencePage } from "../features/constructors/ConstructorIntelligencePage.js";
-import { DriverDossierPage } from "../features/drivers/DriverDossierPage.js";
-import { RacePlaybackPage } from "../features/races/RacePlaybackPage.js";
-import { SeasonExplorerPage } from "../features/season/SeasonExplorerPage.js";
-import { SettingsPage } from "../features/settings/SettingsPage.js";
-import { StrategyLabPage } from "../features/strategy/StrategyLabPage.js";
-import { TelemetryViewerPage } from "../features/telemetry/TelemetryViewerPage.js";
 import { RootLayout } from "../layouts/RootLayout.js";
-import { MissionControlPage } from "./MissionControlPage.js";
 import { RouteholderPage } from "./RouteholderPage.js";
 
-/** Routes with a real page; anything not listed falls back to a placeholder. */
+const MissionControlPage = lazy(() =>
+  import("./MissionControlPage.js").then((m) => ({ default: m.MissionControlPage })),
+);
+const DriverDossierPage = lazy(() =>
+  import("../features/drivers/DriverDossierPage.js").then((m) => ({
+    default: m.DriverDossierPage,
+  })),
+);
+const ConstructorIntelligencePage = lazy(() =>
+  import("../features/constructors/ConstructorIntelligencePage.js").then((m) => ({
+    default: m.ConstructorIntelligencePage,
+  })),
+);
+const RacePlaybackPage = lazy(() =>
+  import("../features/races/RacePlaybackPage.js").then((m) => ({ default: m.RacePlaybackPage })),
+);
+const CircuitExplorerPage = lazy(() =>
+  import("../features/circuits/CircuitExplorerPage.js").then((m) => ({
+    default: m.CircuitExplorerPage,
+  })),
+);
+const TelemetryViewerPage = lazy(() =>
+  import("../features/telemetry/TelemetryViewerPage.js").then((m) => ({
+    default: m.TelemetryViewerPage,
+  })),
+);
+const StrategyLabPage = lazy(() =>
+  import("../features/strategy/StrategyLabPage.js").then((m) => ({ default: m.StrategyLabPage })),
+);
+const SeasonExplorerPage = lazy(() =>
+  import("../features/season/SeasonExplorerPage.js").then((m) => ({
+    default: m.SeasonExplorerPage,
+  })),
+);
+const SettingsPage = lazy(() =>
+  import("../features/settings/SettingsPage.js").then((m) => ({ default: m.SettingsPage })),
+);
+
+/** Routes with a real page; anything not listed falls back to a placeholder.
+ *
+ * Every entry is `React.lazy(() => import(...))` rather than a static
+ * import — previously every page (and every page's ECharts usage) shipped
+ * in one >1.2MB chunk regardless of which single route a visitor loaded
+ * (Phase 7 audit, High). `RootLayout` wraps `<Outlet/>` in a `<Suspense>`
+ * boundary that covers whichever of these renders.
+ */
 const IMPLEMENTED_PAGES: Record<string, ReactElement> = {
   "/": <MissionControlPage />,
   "/drivers": <DriverDossierPage />,

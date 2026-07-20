@@ -4,6 +4,7 @@ import { Dashboard, Features, Hero, Statistics, Widget, WidgetGrid } from "@pit-
 import { FEATURES } from "../constants/features.js";
 import { STATISTICS } from "../constants/statistics.js";
 import { useDashboard, useDashboardHighlights } from "../features/dashboard/queries.js";
+import { EmptyState } from "../lib/empty-state.js";
 import { QueryError } from "../lib/query-error.js";
 
 /**
@@ -188,6 +189,9 @@ function StandingsRow({
 }
 
 function DriverStandingsList({ entries }: { entries: readonly DriverStandingEntry[] }) {
+  if (entries.length === 0) {
+    return <EmptyState message="No standings yet" />;
+  }
   return (
     <ol className="flex flex-col gap-2">
       {entries.slice(0, 5).map((entry) => (
@@ -203,6 +207,9 @@ function DriverStandingsList({ entries }: { entries: readonly DriverStandingEntr
 }
 
 function ConstructorStandingsList({ entries }: { entries: readonly ConstructorStandingEntry[] }) {
+  if (entries.length === 0) {
+    return <EmptyState message="No standings yet" />;
+  }
   return (
     <ol className="flex flex-col gap-2">
       {entries.slice(0, 5).map((entry) => (

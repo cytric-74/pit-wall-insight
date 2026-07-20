@@ -29,6 +29,12 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
     )
 
+    # No rate limiting exists in-process — every route (notably `/search`
+    # and `/strategy/tyres`, both unauthenticated and expensive) is
+    # unprotected against scraping or abuse at the application layer
+    # (Phase 7 audit, High). This must be enforced at the reverse-proxy/API
+    # gateway layer before any public deployment; see docs/11_DEPLOYMENT.md
+    # ("Security" -> "Rate Limiting") for the explicit requirement.
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(
         CORSMiddleware,

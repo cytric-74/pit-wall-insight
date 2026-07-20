@@ -36,4 +36,4 @@ asyncio_mode = "auto"
 
 [tool.coverage.run]
 source = ["app"]
-omit = ["app/models/*", "app/repositories/*", "app/services/*"]
+omit = ["app/models/*"]

@@ -36,3 +36,10 @@ async def test_tyre_degradation_returns_an_empty_list_when_nothing_matches(
 
     assert response.status_code == 200
     assert response.json()["data"]["points"] == []
+
+
+async def test_tyre_degradation_requires_a_season_or_driver(client: AsyncClient) -> None:
+    response = await client.get("/api/v1/strategy/tyres")
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"

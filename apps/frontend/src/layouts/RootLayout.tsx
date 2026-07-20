@@ -1,5 +1,5 @@
-import { cn } from "@pit-wall-insight/ui";
-import { useEffect, useState } from "react";
+import { cn, Spinner } from "@pit-wall-insight/ui";
+import { Suspense, useEffect, useState } from "react";
 import { Outlet } from "react-router";
 
 import { CommandPalette } from "./CommandPalette.js";
@@ -41,7 +41,15 @@ export function RootLayout() {
       >
         <Header onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
         <main className="flex-1 px-6 py-8">
-          <Outlet />
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-16">
+                <Spinner className="size-8" aria-label="Loading page…" />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
         <Footer />
       </div>

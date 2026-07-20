@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 
 import { resolveConstructorId } from "../../lib/constructor-id.js";
+import { EmptyState } from "../../lib/empty-state.js";
 import { QueryError } from "../../lib/query-error.js";
 import { useSessionResults } from "../sessions/queries.js";
 import {
@@ -217,6 +218,8 @@ export function RacePlaybackPage() {
           >
             {strategyQuery.isError ? (
               <QueryError />
+            ) : strategyEvents.length === 0 ? (
+              <EmptyState message="No race events found" />
             ) : (
               <ol className="flex flex-col gap-3">
                 {strategyEvents.map((event, index) => (
@@ -239,6 +242,8 @@ export function RacePlaybackPage() {
           >
             {resultsQuery.isError ? (
               <QueryError />
+            ) : finalClassification.length === 0 ? (
+              <EmptyState message="No results found" />
             ) : (
               <ol className="flex flex-col gap-2">
                 {finalClassification.map((entry, index) => (

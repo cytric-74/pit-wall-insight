@@ -608,7 +608,11 @@ Configured
 
 Rate Limiting
 
-Future
+Not implemented in-process (no middleware/dependency on any route). Required
+at the reverse-proxy/API gateway layer (e.g. nginx `limit_req`, an API
+gateway, or a CDN's rate-limiting product) before any public deployment —
+`/search` and `/strategy/tyres` in particular are unauthenticated and
+expensive (Phase 7 audit, High).
 
 JWT
 

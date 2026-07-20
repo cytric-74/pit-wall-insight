@@ -10,6 +10,7 @@ import {
 } from "@pit-wall-insight/ui";
 import { useState } from "react";
 
+import { EmptyState } from "../../lib/empty-state.js";
 import { QueryError } from "../../lib/query-error.js";
 import { useRacePitstops, useRaces, useRaceStrategy } from "../races/queries.js";
 import { useTyreDegradation } from "./queries.js";
@@ -144,21 +145,27 @@ export function StrategyLabPage() {
             loading={pitstopsQuery.isPending}
             className="laptop:col-span-6"
           >
-            <ol className="flex flex-col gap-3">
-              {pitstops.map((stop, index) => (
-                <li
-                  key={`${stop.driver}-${index}`}
-                  className="flex items-center justify-between gap-3 border-b border-border-subtle pb-2 last:border-b-0 last:pb-0"
-                >
-                  <span className="text-body-sm text-text-primary">
-                    {stop.driver} · Lap {stop.lap}
-                  </span>
-                  <span className="font-mono text-caption tabular-nums text-text-muted">
-                    {stop.pitDuration != null ? `${stop.pitDuration.toFixed(1)}s` : "—"}
-                  </span>
-                </li>
-              ))}
-            </ol>
+            {pitstopsQuery.isError ? (
+              <QueryError />
+            ) : pitstops.length === 0 ? (
+              <EmptyState message="No pit stops found" />
+            ) : (
+              <ol className="flex flex-col gap-3">
+                {pitstops.map((stop, index) => (
+                  <li
+                    key={`${stop.driver}-${index}`}
+                    className="flex items-center justify-between gap-3 border-b border-border-subtle pb-2 last:border-b-0 last:pb-0"
+                  >
+                    <span className="text-body-sm text-text-primary">
+                      {stop.driver} · Lap {stop.lap}
+                    </span>
+                    <span className="font-mono text-caption tabular-nums text-text-muted">
+                      {stop.pitDuration != null ? `${stop.pitDuration.toFixed(1)}s` : "—"}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
           </Widget>
 
           <Widget
@@ -167,17 +174,21 @@ export function StrategyLabPage() {
             loading={degradationQuery.isPending}
             className="laptop:col-span-6"
           >
-            <LineChart
-              categories={degradationChart.categories}
-              series={degradationChart.series.map((entry) => ({
-                name: entry.compound,
-                data: entry.data,
-              }))}
-              xAxisLabel="Tyre life (laps)"
-              yAxisLabel="s"
-              valueFormatter={(value) => `${value.toFixed(2)}s`}
-              ariaLabel={`${selectedRace?.raceName ?? "Race"} tyre degradation by compound`}
-            />
+            {degradationQuery.isError ? (
+              <QueryError />
+            ) : (
+              <LineChart
+                categories={degradationChart.categories}
+                series={degradationChart.series.map((entry) => ({
+                  name: entry.compound,
+                  data: entry.data,
+                }))}
+                xAxisLabel="Tyre life (laps)"
+                yAxisLabel="s"
+                valueFormatter={(value) => `${value.toFixed(2)}s`}
+                ariaLabel={`${selectedRace?.raceName ?? "Race"} tyre degradation by compound`}
+              />
+            )}
           </Widget>
 
           <Widget
@@ -200,15 +211,19 @@ export function StrategyLabPage() {
             loading={degradationQuery.isPending}
             className="laptop:col-span-6"
           >
-            <BarChart
-              categories={effectiveness.map((entry) => entry.compound)}
-              series={[
-                { name: "Avg pace", data: effectiveness.map((entry) => entry.averageLapTime) },
-              ]}
-              yAxisLabel="Seconds"
-              valueFormatter={(value) => `${value.toFixed(1)}s`}
-              ariaLabel={`${selectedRace?.raceName ?? "Race"} compound effectiveness`}
-            />
+            {degradationQuery.isError ? (
+              <QueryError />
+            ) : (
+              <BarChart
+                categories={effectiveness.map((entry) => entry.compound)}
+                series={[
+                  { name: "Avg pace", data: effectiveness.map((entry) => entry.averageLapTime) },
+                ]}
+                yAxisLabel="Seconds"
+                valueFormatter={(value) => `${value.toFixed(1)}s`}
+                ariaLabel={`${selectedRace?.raceName ?? "Race"} compound effectiveness`}
+              />
+            )}
           </Widget>
 
           <Widget

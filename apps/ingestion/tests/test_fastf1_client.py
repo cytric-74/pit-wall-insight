@@ -16,8 +16,11 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
+import requests
+from fastf1.exceptions import InvalidSessionError, NoLapDataError, RateLimitExceededError
 
 import collectors.fastf1_client as fastf1_client
+from collectors.exceptions import SourceUnavailableError, UnexpectedResponseShapeError
 from collectors.fastf1_client import (
     _dataframe_to_records,
     _normalize_value,
@@ -165,3 +168,55 @@ def test_get_session_weather_requests_only_weather() -> None:
 
     session.load.assert_called_once_with(laps=False, telemetry=False, weather=True, messages=False)
     assert records == [{"AirTemp": 24.5}]
+
+
+class TestErrorWrapping:
+    """A FastF1-sourced failure must surface as this package's own
+    `CollectorError` subclasses (not a raw `fastf1`/`requests` exception),
+    so `main.py`'s `except CollectorError` isolates it from the rest of a
+    `collect` run the same way it already does for `ergast_client.py`
+    failures (Phase 7 audit, High) — except `InvalidSessionError`, which
+    stays unwrapped on purpose (a caller error, not a source failure)."""
+
+    def test_get_event_schedule_wraps_a_network_failure(self) -> None:
+        with (
+            patch("collectors.fastf1_client.ensure_cache_enabled"),
+            patch(
+                "collectors.fastf1_client.fastf1.get_event_schedule",
+                side_effect=requests.ConnectionError("boom"),
+            ),
+            pytest.raises(SourceUnavailableError),
+        ):
+            get_event_schedule(2024)
+
+    def test_get_session_results_wraps_a_rate_limit_error(self) -> None:
+        with (
+            patch("collectors.fastf1_client.ensure_cache_enabled"),
+            patch(
+                "collectors.fastf1_client.fastf1.get_session",
+                side_effect=RateLimitExceededError(),
+            ),
+            pytest.raises(SourceUnavailableError),
+        ):
+            get_session_results(2024, 1, "R")
+
+    def test_get_session_laps_wraps_no_lap_data_error(self) -> None:
+        session = MagicMock()
+        session.load.side_effect = NoLapDataError()
+        with (
+            patch("collectors.fastf1_client.ensure_cache_enabled"),
+            patch("collectors.fastf1_client.fastf1.get_session", return_value=session),
+            pytest.raises(UnexpectedResponseShapeError),
+        ):
+            get_session_laps(2024, 1, "R")
+
+    def test_invalid_session_error_is_not_wrapped(self) -> None:
+        with (
+            patch("collectors.fastf1_client.ensure_cache_enabled"),
+            patch(
+                "collectors.fastf1_client.fastf1.get_session",
+                side_effect=InvalidSessionError(),
+            ),
+            pytest.raises(InvalidSessionError),
+        ):
+            get_session_results(2024, 1, "R")

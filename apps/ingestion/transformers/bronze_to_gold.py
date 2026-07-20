@@ -38,6 +38,7 @@ tuple that identifies them — see each function below for its exact key.
 from __future__ import annotations
 
 import itertools
+import logging
 import statistics
 import uuid
 from collections import defaultdict
@@ -45,11 +46,13 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
-from sqlalchemy import Column, Uuid, func, or_, select
+from sqlalchemy import Column, Uuid, func, select
 from sqlalchemy.engine import Engine
 
 from utils.db import reflect_table, upsert
 from utils.ids import generate_id
+
+logger = logging.getLogger("ingestion.transformers")
 
 _TRANSFORM_SOURCE = "transform"
 
@@ -196,17 +199,43 @@ def _transform_drivers(raw_engine: Engine, gold_engine: Engine, *, pipeline_vers
         driver_rows = connection.execute(select(raw_drivers)).mappings().all()
         latest_season = connection.execute(select(func.max(raw_results.c.season))).scalar_one_or_none()
 
+        # Fetched once and grouped in Python (matching `_transform_laps`/
+        # `_transform_results`) rather than one query per driver — the
+        # original per-driver `SELECT ... WHERE driver_ref = ? OR
+        # driver_code = ?` was an N+1 query pattern that scaled linearly
+        # with the (all-time, not season-scoped) driver count (Phase 7
+        # audit, High).
+        results_by_ref: dict[Any, list[dict[str, Any]]] = defaultdict(list)
+        results_by_code: dict[Any, list[dict[str, Any]]] = defaultdict(list)
+        for row in connection.execute(select(raw_results)).mappings().all():
+            result_row = dict(row)
+            results_by_ref[result_row["driver_ref"]].append(result_row)
+            if result_row["driver_code"] is not None:
+                results_by_code[result_row["driver_code"]].append(result_row)
+
+        constructor_id_by_ref = {
+            row["constructor_id"]: row["id"]
+            for row in connection.execute(select(raw_constructors)).mappings().all()
+        }
+        constructor_id_by_name = {
+            row["name"]: row["id"]
+            for row in connection.execute(select(raw_constructors)).mappings().all()
+        }
+
         gold_rows: list[dict[str, Any]] = []
         for driver in driver_rows:
             natural_key = driver["driver_id"]
             code = driver["code"]
 
-            conditions = [raw_results.c.driver_ref == natural_key]
+            # A row can satisfy both the driver_ref and driver_code match,
+            # so results are merged into a dict keyed by row id — the same
+            # de-duplication the original `OR`-based query gave for free.
+            matches_by_id = {match["id"]: match for match in results_by_ref.get(natural_key, [])}
             if code:
-                conditions.append(raw_results.c.driver_code == code)
-            matches = connection.execute(
-                select(raw_results).where(or_(*conditions))
-            ).mappings().all()
+                matches_by_id.update(
+                    {match["id"]: match for match in results_by_code.get(code, [])}
+                )
+            matches = list(matches_by_id.values())
 
             rookie_season = min((match["season"] for match in matches), default=None)
             active = latest_season is not None and any(
@@ -241,22 +270,10 @@ def _transform_drivers(raw_engine: Engine, gold_engine: Engine, *, pipeline_vers
             )
             if jolpica_candidates:
                 constructor_ref = jolpica_candidates[-1]["constructor_ref"]
-                constructor_row = connection.execute(
-                    select(raw_constructors.c.id).where(
-                        raw_constructors.c.constructor_id == constructor_ref
-                    )
-                ).first()
-                if constructor_row is not None:
-                    team_id = constructor_row[0]
+                team_id = constructor_id_by_ref.get(constructor_ref)
             elif fastf1_candidates:
                 constructor_ref = fastf1_candidates[-1]["constructor_ref"]
-                constructor_row = connection.execute(
-                    select(raw_constructors.c.id).where(
-                        raw_constructors.c.name == constructor_ref
-                    )
-                ).first()
-                if constructor_row is not None:
-                    team_id = constructor_row[0]
+                team_id = constructor_id_by_name.get(constructor_ref)
 
             gold_rows.append(
                 {
@@ -1421,33 +1438,70 @@ def run_transform(raw_engine: Engine, gold_engine: Engine, *, season: int, pipel
         steps just finished writing, never from Bronze).
 
     Returns a dict of `{step_name: rows_upserted}` for logging.
+
+    Each of the 10 steps above commits its own independent transaction (via
+    `utils.db.upsert`) — there is no outer transaction wrapping all of
+    them. If a later step raises, earlier steps stay committed, leaving
+    Gold partially updated for this season with nothing else telling an
+    operator that happened (Phase 7 audit, High: "a blind re-run isn't the
+    only way this gets noticed"). This function is idempotent and safe to
+    re-run, but the `except` block below logs exactly which step failed and
+    which steps already committed, so that fact doesn't depend on someone
+    reading this docstring first.
     """
     summary: dict[str, int] = {}
-    summary["circuits"] = _transform_circuits(raw_engine, gold_engine, pipeline_version=pipeline_version)
-    summary["constructors"] = _transform_constructors(
-        raw_engine, gold_engine, pipeline_version=pipeline_version
-    )
-    summary["drivers"] = _transform_drivers(raw_engine, gold_engine, pipeline_version=pipeline_version)
-    summary["season"] = _transform_season_shell(
-        raw_engine, gold_engine, season, pipeline_version=pipeline_version
-    )
-    summary["weather"] = _transform_weather(
-        raw_engine, gold_engine, season, pipeline_version=pipeline_version
-    )
-    summary["sessions"] = _transform_sessions(
-        raw_engine, gold_engine, season, pipeline_version=pipeline_version
-    )
-    laps_count, laps_by_driver_session = _transform_laps(
-        raw_engine, gold_engine, season, pipeline_version=pipeline_version
-    )
-    summary["laps"] = laps_count
-    summary["pitstops"] = _transform_pitstops(
-        gold_engine, season, laps_by_driver_session, pipeline_version=pipeline_version
-    )
-    summary["results"] = _transform_results(
-        raw_engine, gold_engine, season, laps_by_driver_session, pipeline_version=pipeline_version
-    )
-    _finalize_season_champion(gold_engine, season, pipeline_version=pipeline_version)
-    _finalize_driver_world_titles(gold_engine, pipeline_version=pipeline_version)
-    summary.update(_transform_marts(gold_engine, season, pipeline_version=pipeline_version))
+    current_step = "circuits"
+    try:
+        summary["circuits"] = _transform_circuits(
+            raw_engine, gold_engine, pipeline_version=pipeline_version
+        )
+        current_step = "constructors"
+        summary["constructors"] = _transform_constructors(
+            raw_engine, gold_engine, pipeline_version=pipeline_version
+        )
+        current_step = "drivers"
+        summary["drivers"] = _transform_drivers(
+            raw_engine, gold_engine, pipeline_version=pipeline_version
+        )
+        current_step = "season"
+        summary["season"] = _transform_season_shell(
+            raw_engine, gold_engine, season, pipeline_version=pipeline_version
+        )
+        current_step = "weather"
+        summary["weather"] = _transform_weather(
+            raw_engine, gold_engine, season, pipeline_version=pipeline_version
+        )
+        current_step = "sessions"
+        summary["sessions"] = _transform_sessions(
+            raw_engine, gold_engine, season, pipeline_version=pipeline_version
+        )
+        current_step = "laps"
+        laps_count, laps_by_driver_session = _transform_laps(
+            raw_engine, gold_engine, season, pipeline_version=pipeline_version
+        )
+        summary["laps"] = laps_count
+        current_step = "pitstops"
+        summary["pitstops"] = _transform_pitstops(
+            gold_engine, season, laps_by_driver_session, pipeline_version=pipeline_version
+        )
+        current_step = "results"
+        summary["results"] = _transform_results(
+            raw_engine, gold_engine, season, laps_by_driver_session, pipeline_version=pipeline_version
+        )
+        current_step = "finalize_season_champion"
+        _finalize_season_champion(gold_engine, season, pipeline_version=pipeline_version)
+        current_step = "finalize_driver_world_titles"
+        _finalize_driver_world_titles(gold_engine, pipeline_version=pipeline_version)
+        current_step = "marts"
+        summary.update(_transform_marts(gold_engine, season, pipeline_version=pipeline_version))
+    except Exception:
+        logger.exception(
+            "run_transform failed at step %r for season %s; steps already committed for this "
+            "season (%s) are left in place, and Gold is now partially updated until a re-run "
+            "completes successfully",
+            current_step,
+            season,
+            ", ".join(summary) or "none",
+        )
+        raise
     return summary

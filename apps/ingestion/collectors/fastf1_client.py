@@ -37,10 +37,16 @@ belongs to `validators/schema.py`, not to a collector.
 Edge cases
 ----------
 - A session that doesn't exist for a given year/event (e.g. requesting a
-  Sprint session for a weekend that didn't have one) raises whatever
-  `fastf1` itself raises; this module does not swallow that, because it
-  means the caller asked for something that was never going to exist, which
-  is a caller error rather than a transient data problem.
+  Sprint session for a weekend that didn't have one) raises
+  `fastf1.exceptions.InvalidSessionError` unwrapped; this module does not
+  swallow that, because it means the caller asked for something that was
+  never going to exist, which is a caller error rather than a transient
+  data problem.
+- Network/source failures and FastF1's own unrecoverable errors are wrapped
+  into `SourceUnavailableError`; successful-but-unusable responses are
+  wrapped into `UnexpectedResponseShapeError` — same taxonomy
+  `ergast_client.py` uses, so `main.py`'s `except CollectorError` isolates
+  a FastF1-sourced failure the same way it already does for Jolpica.
 - Loading is scoped per function (`_load_session` only requests the data
   categories that function actually needs) because a full `session.load()`
   with telemetry enabled can take tens of seconds to minutes per session —
@@ -57,8 +63,26 @@ from typing import Any, cast
 
 import fastf1
 import pandas as pd
+import requests
+from fastf1.exceptions import DataNotLoadedError, FastF1CriticalError, NoLapDataError
 
+from collectors.exceptions import SourceUnavailableError, UnexpectedResponseShapeError
 from config.settings import get_settings
+
+# Network/source failures this module wraps into `SourceUnavailableError` —
+# `requests.RequestException` for the HTTP layer FastF1 makes its calls
+# over, `FastF1CriticalError` (and its `RateLimitExceededError` subclass)
+# for the failures FastF1's own code deliberately lets escape its internal
+# catch-all rather than degrade silently (see fastf1.exceptions' module
+# docstring). `InvalidSessionError` is deliberately *not* included here — a
+# session that doesn't exist for the requested year/event/type is a caller
+# error, not a source failure, and this module has never swallowed it (see
+# `get_event_schedule`'s and `_load_session`'s docstrings).
+_SOURCE_ERRORS = (requests.RequestException, FastF1CriticalError)
+# Responses that came back successfully but produced no usable data —
+# distinct from a source failure, this is `UnexpectedResponseShapeError`'s
+# territory (see `collectors/exceptions.py`).
+_SHAPE_ERRORS = (DataNotLoadedError, NoLapDataError)
 
 # Guards `fastf1.Cache.enable_cache` so it only ever runs once per process,
 # regardless of how many times `ensure_cache_enabled` is called. FastF1's
@@ -193,7 +217,16 @@ def get_event_schedule(year: int, *, include_testing: bool = False) -> list[dict
     with no announced calendar yet).
     """
     ensure_cache_enabled()
-    schedule = fastf1.get_event_schedule(year, include_testing=include_testing)
+    try:
+        schedule = fastf1.get_event_schedule(year, include_testing=include_testing)
+    except _SOURCE_ERRORS as exc:
+        raise SourceUnavailableError(
+            f"FastF1 event schedule request failed for {year}: {exc}"
+        ) from exc
+    except _SHAPE_ERRORS as exc:
+        raise UnexpectedResponseShapeError(
+            f"FastF1 event schedule for {year} had no usable data: {exc}"
+        ) from exc
     return _dataframe_to_records(schedule)
 
 
@@ -220,10 +253,31 @@ def _load_session(
     error. Callers see this as an empty list, not an exception, which is
     the correct signal: the session existed, it simply produced no lap
     data.
+
+    A session that doesn't exist for the requested year/event/type raises
+    `fastf1.exceptions.InvalidSessionError` unwrapped, same as before — a
+    caller error, not a transient data problem (see this module's own
+    docstring). Network/source failures (`requests.RequestException`,
+    `FastF1CriticalError`) and successful-but-unusable responses
+    (`DataNotLoadedError`, `NoLapDataError`) are wrapped into this
+    package's own `SourceUnavailableError`/`UnexpectedResponseShapeError`
+    so `main.py`'s `except CollectorError` — which already isolates one
+    entity's failure from the rest of a `collect` run — actually catches
+    them, instead of a FastF1-sourced failure crashing the whole run
+    (Phase 7 audit, High).
     """
     ensure_cache_enabled()
-    session = fastf1.get_session(year, event, session_type)
-    session.load(laps=laps, telemetry=False, weather=weather, messages=False)
+    try:
+        session = fastf1.get_session(year, event, session_type)
+        session.load(laps=laps, telemetry=False, weather=weather, messages=False)
+    except _SOURCE_ERRORS as exc:
+        raise SourceUnavailableError(
+            f"FastF1 session request failed for {year} {event} {session_type}: {exc}"
+        ) from exc
+    except _SHAPE_ERRORS as exc:
+        raise UnexpectedResponseShapeError(
+            f"FastF1 session {year} {event} {session_type} had no usable data: {exc}"
+        ) from exc
     return session
 
 

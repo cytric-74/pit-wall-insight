@@ -64,10 +64,18 @@ class GoldBase(DeclarativeBase):
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Yield a session against the raw/bronze database, one per request."""
     async with AsyncSessionLocal() as session:
-        yield session
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
 
 
 async def get_analytics_session() -> AsyncGenerator[AsyncSession, None]:
     """Yield a session against the analytics/gold database, one per request."""
     async with AnalyticsAsyncSessionLocal() as session:
-        yield session
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise

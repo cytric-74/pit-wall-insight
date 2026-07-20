@@ -1,6 +1,7 @@
 import { Container, Hero, Select, Widget, WidgetGrid } from "@pit-wall-insight/ui";
 import { useState } from "react";
 
+import { EmptyState } from "../../lib/empty-state.js";
 import { QueryError } from "../../lib/query-error.js";
 import { useCircuit, useCircuitHistory, useCircuitRecords, useCircuits } from "./queries.js";
 import { TrackShape } from "./TrackShape.js";
@@ -103,6 +104,8 @@ export function CircuitExplorerPage() {
           >
             {historyQuery.isError ? (
               <QueryError />
+            ) : history.length === 0 ? (
+              <EmptyState message="No races found" />
             ) : (
               <ol className="flex flex-col gap-2">
                 {history.map((entry) => (
