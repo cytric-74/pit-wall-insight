@@ -8,6 +8,7 @@
  */
 
 export * from "./circuit.js";
+export * from "./compare.js";
 export * from "./constructor.js";
 export * from "./dashboard.js";
 export * from "./driver.js";
