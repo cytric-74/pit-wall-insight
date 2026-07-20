@@ -5,7 +5,6 @@ import type {
   RaceListItem,
   RaceSummary,
   RaceWeather,
-  SessionResultEntry,
 } from "@pit-wall-insight/shared-types";
 
 import { apiGet, apiGetCollection, type QueryParamValue } from "../../lib/api-client.js";
@@ -54,16 +53,13 @@ export function getRaceStrategy(raceId: string): Promise<DriverStrategy[]> {
  * recent season present in the (season desc, round desc)-ordered list.
  * Shared by any feature that needs a season timeline reconstructed from
  * individual race results (Drivers' per-round position history,
- * Constructors' season performance/driver comparison charts).
+ * Constructors' season performance/driver comparison charts — see
+ * `features/sessions/api.ts::getSessionResults`, since a race's results
+ * are a session's results).
  */
 export async function getCurrentSeasonRaces(): Promise<RaceListItem[]> {
   const { data } = await apiGetCollection<RaceListItem>("/races", { limit: 30 });
   if (data.length === 0) return [];
   const currentSeason = data[0]!.season;
   return data.filter((race) => race.season === currentSeason).sort((a, b) => a.round - b.round);
-}
-
-/** `GET /sessions/{id}/results` — see `getCurrentSeasonRaces` above. */
-export function getSessionResults(sessionId: string): Promise<SessionResultEntry[]> {
-  return apiGet<SessionResultEntry[]>(`/sessions/${sessionId}/results`);
 }

@@ -13,7 +13,8 @@ import {
 import { useEffect, useState } from "react";
 
 import { resolveConstructorId } from "../../lib/constructor-id.js";
-import { useCurrentSeasonRaces, useSessionResultsForRaces } from "../races/queries.js";
+import { useCurrentSeasonRaces } from "../races/queries.js";
+import { useSessionResultsForRaces } from "../sessions/queries.js";
 import {
   useConstructor,
   useConstructorDrivers,

@@ -13,11 +13,11 @@ import {
 import { useState } from "react";
 
 import { resolveConstructorId } from "../../lib/constructor-id.js";
+import { useSessionResults } from "../sessions/queries.js";
 import {
   useRace,
   useRacePitstops,
   useRacePositions,
-  useRaceResults,
   useRaces,
   useRaceStrategy,
   useRaceWeather,
@@ -67,7 +67,7 @@ export function RacePlaybackPage() {
   const strategyQuery = useRaceStrategy(raceId);
   const strategyEvents = buildStrategyEvents(strategyQuery.data ?? []);
 
-  const resultsQuery = useRaceResults(raceId);
+  const resultsQuery = useSessionResults(raceId);
   const results = resultsQuery.data ?? [];
   const teamByDriver = new Map(results.map((entry) => [entry.driver, entry.team]));
 

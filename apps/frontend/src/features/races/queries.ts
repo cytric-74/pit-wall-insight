@@ -1,5 +1,4 @@
-import type { RaceListItem } from "@pit-wall-insight/shared-types";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   getCurrentSeasonRaces,
@@ -8,7 +7,6 @@ import {
   getRacePositions,
   getRaceStrategy,
   getRaceWeather,
-  getSessionResults,
   listRaces,
   type ListRacesParams,
 } from "./api.js";
@@ -70,34 +68,9 @@ export function useRaceStrategy(raceId: string | undefined) {
   });
 }
 
-/** `GET /sessions/{id}/results` for a single race — shares its query key
- * shape with `useSessionResultsForRaces` below, so the cache lines up if
- * both ever request the same race. */
-export function useRaceResults(raceId: string | undefined) {
-  return useQuery({
-    queryKey: ["sessions", raceId ?? "", "results"] as const,
-    queryFn: () => getSessionResults(raceId!),
-    enabled: raceId !== undefined,
-  });
-}
-
 export function useCurrentSeasonRaces() {
   return useQuery({
     queryKey: ["races", "current-season"] as const,
     queryFn: getCurrentSeasonRaces,
-  });
-}
-
-/** One `GET /sessions/{id}/results` query per race, in the same order as
- * `races` — shared (by query key) between whichever components need
- * per-round results for more than one driver/constructor, so the
- * underlying fetch only happens once per race regardless of how many
- * consumers read it. */
-export function useSessionResultsForRaces(races: readonly RaceListItem[] | undefined) {
-  return useQueries({
-    queries: (races ?? []).map((race) => ({
-      queryKey: ["sessions", race.id, "results"] as const,
-      queryFn: () => getSessionResults(race.id),
-    })),
   });
 }
