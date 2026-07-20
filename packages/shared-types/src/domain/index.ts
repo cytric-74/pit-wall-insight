@@ -8,3 +8,6 @@
  */
 
 export * from "./dashboard.js";
+export * from "./driver.js";
+export * from "./race.js";
+export * from "./session.js";

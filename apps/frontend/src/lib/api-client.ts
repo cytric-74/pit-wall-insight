@@ -1,4 +1,8 @@
-import type { ApiResponse } from "@pit-wall-insight/shared-types";
+import type {
+  ApiCollectionResponse,
+  ApiResponse,
+  PaginationMeta,
+} from "@pit-wall-insight/shared-types";
 
 /**
  * Reusable HTTP client for the Pit Wall Insight API. Every feature's
@@ -58,4 +62,35 @@ export async function apiGet<T>(
     throw new ApiError(body.error.message, body.error.code, response.status);
   }
   return body.data;
+}
+
+export interface Collection<T> {
+  data: T[];
+  pagination: PaginationMeta;
+}
+
+/** Same as `apiGet`, for endpoints that return the paginated
+ * `{success, data: T[], pagination}` collection envelope instead of the
+ * single-resource `{success, data: T}` one. */
+export async function apiGetCollection<T>(
+  path: string,
+  params?: Record<string, QueryParamValue>,
+): Promise<Collection<T>> {
+  const response = await fetch(buildUrl(path, params));
+
+  let body: ApiCollectionResponse<T> | { success: false; error: { code: string; message: string } };
+  try {
+    body = (await response.json()) as typeof body;
+  } catch {
+    throw new ApiError(
+      `Request to ${path} failed with status ${response.status} and no JSON body.`,
+      "INVALID_RESPONSE",
+      response.status,
+    );
+  }
+
+  if (!body.success) {
+    throw new ApiError(body.error.message, body.error.code, response.status);
+  }
+  return { data: body.data, pagination: body.pagination };
 }
