@@ -4,6 +4,7 @@ import { Dashboard, Features, Hero, Statistics, Widget, WidgetGrid } from "@pit-
 import { FEATURES } from "../constants/features.js";
 import { STATISTICS } from "../constants/statistics.js";
 import { useDashboard, useDashboardHighlights } from "../features/dashboard/queries.js";
+import { QueryError } from "../lib/query-error.js";
 
 /**
  * The Hero/Features/Statistics sections stay static marketing copy; the
@@ -59,7 +60,9 @@ export function MissionControlPage() {
             loading={dashboardQuery.isPending}
             className="sm:col-span-2 laptop:col-span-12"
           >
-            {dashboard ? (
+            {dashboardQuery.isError ? (
+              <QueryError />
+            ) : dashboard ? (
               <div className="flex flex-col gap-2">
                 <span className="text-body-sm text-text-primary">{dashboard.season} season</span>
                 <span className="text-caption text-text-muted">
@@ -79,7 +82,11 @@ export function MissionControlPage() {
             loading={dashboardQuery.isPending}
             className="laptop:col-span-6"
           >
-            {dashboard ? <DriverStandingsList entries={dashboard.driverStandings} /> : null}
+            {dashboardQuery.isError ? (
+              <QueryError />
+            ) : dashboard ? (
+              <DriverStandingsList entries={dashboard.driverStandings} />
+            ) : null}
           </Widget>
           <Widget
             title="Constructor standings"
@@ -89,7 +96,9 @@ export function MissionControlPage() {
             loading={dashboardQuery.isPending}
             className="laptop:col-span-6"
           >
-            {dashboard ? (
+            {dashboardQuery.isError ? (
+              <QueryError />
+            ) : dashboard ? (
               <ConstructorStandingsList entries={dashboard.constructorStandings} />
             ) : null}
           </Widget>
@@ -98,6 +107,7 @@ export function MissionControlPage() {
             href="/telemetry"
             linkLabel="Telemetry Center"
             loading={dashboardQuery.isPending}
+            isError={dashboardQuery.isError}
             value={
               dashboard?.fastestLapTime != null ? `${dashboard.fastestLapTime.toFixed(3)}s` : null
             }
@@ -108,6 +118,7 @@ export function MissionControlPage() {
             href="/strategy"
             linkLabel="Strategy Lab"
             loading={dashboardQuery.isPending}
+            isError={dashboardQuery.isError}
             value={
               dashboard?.fastestPitstop != null ? `${dashboard.fastestPitstop.toFixed(1)}s` : null
             }
@@ -117,6 +128,7 @@ export function MissionControlPage() {
             href="/races"
             linkLabel="Race Playback"
             loading={dashboardQuery.isPending}
+            isError={dashboardQuery.isError}
             value={
               dashboard?.averageOvertakes != null ? dashboard.averageOvertakes.toFixed(1) : null
             }
@@ -129,7 +141,9 @@ export function MissionControlPage() {
             loading={highlightsQuery.isPending}
             className="sm:col-span-2 laptop:col-span-12"
           >
-            {highlights ? (
+            {highlightsQuery.isError ? (
+              <QueryError />
+            ) : highlights ? (
               <div className="flex flex-col gap-2">
                 <span className="text-body-sm text-text-primary">{highlights.raceName ?? "—"}</span>
                 <span className="text-caption text-text-muted">
@@ -208,6 +222,7 @@ interface KpiWidgetProps {
   href: string;
   linkLabel: string;
   loading: boolean;
+  isError?: boolean | undefined;
   value?: string | null | undefined;
   sublabel?: string | undefined;
 }
@@ -217,9 +232,12 @@ interface KpiWidgetProps {
  * fabricated number whenever `value` is null/undefined — including once
  * wired up, since some metrics (e.g. average pit stop, pending Phase 4's
  * documented pit-stop-detection gap) can genuinely have no value yet
- * (docs/assets/02_TYPOGRAPHY_SYSTEM.md — "Empty States").
+ * (docs/assets/02_TYPOGRAPHY_SYSTEM.md — "Empty States"). `isError` is a
+ * distinct state from "no data yet": the latter means the metric
+ * genuinely has no value; the former means the request failed and the
+ * value is simply unknown.
  */
-function KpiWidget({ title, href, linkLabel, loading, value, sublabel }: KpiWidgetProps) {
+function KpiWidget({ title, href, linkLabel, loading, isError, value, sublabel }: KpiWidgetProps) {
   return (
     <Widget
       title={title}
@@ -228,25 +246,29 @@ function KpiWidget({ title, href, linkLabel, loading, value, sublabel }: KpiWidg
       loading={loading}
       className="laptop:col-span-4"
     >
-      <div className="flex items-baseline gap-2">
-        {value ? (
-          <>
-            <span className="font-mono text-heading-xl text-text-primary">{value}</span>
-            {sublabel ? (
+      {isError ? (
+        <QueryError />
+      ) : (
+        <div className="flex items-baseline gap-2">
+          {value ? (
+            <>
+              <span className="font-mono text-heading-xl text-text-primary">{value}</span>
+              {sublabel ? (
+                <span className="font-mono text-caption uppercase tracking-wide text-text-muted">
+                  {sublabel}
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <span className="font-mono text-heading-xl text-text-disabled">—</span>
               <span className="font-mono text-caption uppercase tracking-wide text-text-muted">
-                {sublabel}
+                No data yet
               </span>
-            ) : null}
-          </>
-        ) : (
-          <>
-            <span className="font-mono text-heading-xl text-text-disabled">—</span>
-            <span className="font-mono text-caption uppercase tracking-wide text-text-muted">
-              No data yet
-            </span>
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </div>
+      )}
     </Widget>
   );
 }

@@ -196,6 +196,8 @@ def _build_gold_schema() -> MetaData:
         Column("sprint_count", Integer()),
         Column("champion_driver", String()),
         Column("champion_constructor", String()),
+        Column("champion_driver_id", Uuid(), ForeignKey("dim_driver.driver_id")),
+        Column("champion_constructor_id", Uuid(), ForeignKey("dim_constructor.constructor_id")),
     )
     Table(
         "dim_constructor",
@@ -682,13 +684,19 @@ class TestRunTransform:
         run_transform(raw_engine, gold_engine, season=2024, pipeline_version=PIPELINE_VERSION)
 
         table = _table(gold_engine, "dim_season")
+        drivers = _table(gold_engine, "dim_driver")
+        constructors = _table(gold_engine, "dim_constructor")
         with gold_engine.connect() as connection:
             row = connection.execute(select(table)).mappings().one()
+            driver_row = connection.execute(select(drivers)).mappings().one()
+            constructor_row = connection.execute(select(constructors)).mappings().one()
 
         assert row["year"] == 2024
         assert row["race_count"] == 1
         assert row["champion_driver"] == "Max Verstappen"
         assert row["champion_constructor"] == "Red Bull Racing"
+        assert row["champion_driver_id"] == driver_row["driver_id"]
+        assert row["champion_constructor_id"] == constructor_row["constructor_id"]
 
     def test_dim_driver_world_titles_finalized(
         self, raw_engine: Engine, gold_engine: Engine

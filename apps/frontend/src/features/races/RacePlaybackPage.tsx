@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 
 import { resolveConstructorId } from "../../lib/constructor-id.js";
+import { QueryError } from "../../lib/query-error.js";
 import { useSessionResults } from "../sessions/queries.js";
 import {
   useRace,
@@ -87,7 +88,7 @@ export function RacePlaybackPage() {
     <>
       <Hero
         eyebrow="Race Playback"
-        title={race?.raceName ?? "Loading race…"}
+        title={raceQuery.isError ? "Couldn't load race" : (race?.raceName ?? "Loading race…")}
         description={[
           race?.circuit,
           race?.date,
@@ -127,23 +128,27 @@ export function RacePlaybackPage() {
             loading={positionsQuery.isPending}
             className="sm:col-span-2 laptop:col-span-12"
           >
-            <LineChart
-              categories={positionChart.categories}
-              series={positionChart.series.map((entry) => {
-                const teamColor = getConstructorTheme(
-                  resolveConstructorId(teamByDriver.get(entry.driver)),
-                );
-                return {
-                  name: entry.driver,
-                  data: entry.data,
-                  ...(teamColor ? { color: teamColor.primary } : {}),
-                };
-              })}
-              yAxisLabel="Position"
-              yAxisInverse
-              valueFormatter={(value) => `P${value}`}
-              ariaLabel={`${race?.raceName ?? "Race"} position changes by lap`}
-            />
+            {positionsQuery.isError ? (
+              <QueryError />
+            ) : (
+              <LineChart
+                categories={positionChart.categories}
+                series={positionChart.series.map((entry) => {
+                  const teamColor = getConstructorTheme(
+                    resolveConstructorId(teamByDriver.get(entry.driver)),
+                  );
+                  return {
+                    name: entry.driver,
+                    data: entry.data,
+                    ...(teamColor ? { color: teamColor.primary } : {}),
+                  };
+                })}
+                yAxisLabel="Position"
+                yAxisInverse
+                valueFormatter={(value) => `P${value}`}
+                ariaLabel={`${race?.raceName ?? "Race"} position changes by lap`}
+              />
+            )}
           </Widget>
 
           <Widget
@@ -152,31 +157,37 @@ export function RacePlaybackPage() {
             loading={weatherQuery.isPending}
             className="laptop:col-span-6"
           >
-            <dl className="flex flex-col gap-3">
-              <WeatherRow
-                label="Track temperature"
-                value={
-                  weather?.trackTemperature != null
-                    ? formatTemperature(weather.trackTemperature, preferences.temperatureUnit)
-                    : "—"
-                }
-              />
-              <WeatherRow
-                label="Air temperature"
-                value={
-                  weather?.airTemperature != null
-                    ? formatTemperature(weather.airTemperature, preferences.temperatureUnit)
-                    : "—"
-                }
-              />
-              <WeatherRow
-                label="Rainfall"
-                value={weather?.rainfall == null ? "—" : weather.rainfall ? "Yes" : "No"}
-              />
-            </dl>
-            <p className="mt-3 text-caption text-text-muted">
-              Session average, in {temperatureUnitLabel} — not a per-lap trace.
-            </p>
+            {weatherQuery.isError ? (
+              <QueryError />
+            ) : (
+              <>
+                <dl className="flex flex-col gap-3">
+                  <WeatherRow
+                    label="Track temperature"
+                    value={
+                      weather?.trackTemperature != null
+                        ? formatTemperature(weather.trackTemperature, preferences.temperatureUnit)
+                        : "—"
+                    }
+                  />
+                  <WeatherRow
+                    label="Air temperature"
+                    value={
+                      weather?.airTemperature != null
+                        ? formatTemperature(weather.airTemperature, preferences.temperatureUnit)
+                        : "—"
+                    }
+                  />
+                  <WeatherRow
+                    label="Rainfall"
+                    value={weather?.rainfall == null ? "—" : weather.rainfall ? "Yes" : "No"}
+                  />
+                </dl>
+                <p className="mt-3 text-caption text-text-muted">
+                  Session average, in {temperatureUnitLabel} — not a per-lap trace.
+                </p>
+              </>
+            )}
           </Widget>
 
           <Widget
@@ -185,13 +196,17 @@ export function RacePlaybackPage() {
             loading={pitstopsQuery.isPending}
             className="laptop:col-span-6"
           >
-            <BarChart
-              categories={pitstops.map((stop) => `${stop.driver} Lap ${stop.lap}`)}
-              series={[{ name: "Duration", data: pitstops.map((stop) => stop.pitDuration ?? 0) }]}
-              yAxisLabel="Seconds"
-              valueFormatter={(value) => `${value.toFixed(1)}s`}
-              ariaLabel={`${race?.raceName ?? "Race"} pit stop durations`}
-            />
+            {pitstopsQuery.isError ? (
+              <QueryError />
+            ) : (
+              <BarChart
+                categories={pitstops.map((stop) => `${stop.driver} Lap ${stop.lap}`)}
+                series={[{ name: "Duration", data: pitstops.map((stop) => stop.pitDuration ?? 0) }]}
+                yAxisLabel="Seconds"
+                valueFormatter={(value) => `${value.toFixed(1)}s`}
+                ariaLabel={`${race?.raceName ?? "Race"} pit stop durations`}
+              />
+            )}
           </Widget>
 
           <Widget
@@ -200,16 +215,20 @@ export function RacePlaybackPage() {
             loading={strategyQuery.isPending}
             className="laptop:col-span-6"
           >
-            <ol className="flex flex-col gap-3">
-              {strategyEvents.map((event, index) => (
-                <li key={`${event.lap}-${index}`} className="flex gap-3">
-                  <span className="w-14 shrink-0 font-mono text-caption uppercase tracking-wide text-text-muted">
-                    Lap {event.lap}
-                  </span>
-                  <span className="text-body-sm text-text-secondary">{event.label}</span>
-                </li>
-              ))}
-            </ol>
+            {strategyQuery.isError ? (
+              <QueryError />
+            ) : (
+              <ol className="flex flex-col gap-3">
+                {strategyEvents.map((event, index) => (
+                  <li key={`${event.lap}-${index}`} className="flex gap-3">
+                    <span className="w-14 shrink-0 font-mono text-caption uppercase tracking-wide text-text-muted">
+                      Lap {event.lap}
+                    </span>
+                    <span className="text-body-sm text-text-secondary">{event.label}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
           </Widget>
 
           <Widget
@@ -218,24 +237,28 @@ export function RacePlaybackPage() {
             loading={resultsQuery.isPending}
             className="laptop:col-span-6"
           >
-            <ol className="flex flex-col gap-2">
-              {finalClassification.map((entry, index) => (
-                <li
-                  key={entry.driver}
-                  className="flex items-center justify-between border-b border-border-subtle pb-2 last:border-b-0 last:pb-0"
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="font-mono text-caption tabular-nums text-text-muted">
-                      P{index + 1}
+            {resultsQuery.isError ? (
+              <QueryError />
+            ) : (
+              <ol className="flex flex-col gap-2">
+                {finalClassification.map((entry, index) => (
+                  <li
+                    key={entry.driver}
+                    className="flex items-center justify-between border-b border-border-subtle pb-2 last:border-b-0 last:pb-0"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="font-mono text-caption tabular-nums text-text-muted">
+                        P{index + 1}
+                      </span>
+                      <span className="text-body-sm text-text-primary">{entry.driver}</span>
                     </span>
-                    <span className="text-body-sm text-text-primary">{entry.driver}</span>
-                  </span>
-                  <span className="font-mono text-caption uppercase tracking-wide text-text-muted">
-                    {entry.team ?? "—"}
-                  </span>
-                </li>
-              ))}
-            </ol>
+                    <span className="font-mono text-caption uppercase tracking-wide text-text-muted">
+                      {entry.team ?? "—"}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
           </Widget>
         </WidgetGrid>
       </Container>

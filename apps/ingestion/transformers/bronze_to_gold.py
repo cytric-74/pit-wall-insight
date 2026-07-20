@@ -754,7 +754,13 @@ def _finalize_season_champion(gold_engine: Engine, season: int, *, pipeline_vers
     dim_constructor = reflect_table(
         gold_engine, "dim_constructor", Column("constructor_id", Uuid(), primary_key=True)
     )
-    dim_season = reflect_table(gold_engine, "dim_season", Column("season_id", Uuid(), primary_key=True))
+    dim_season = reflect_table(
+        gold_engine,
+        "dim_season",
+        Column("season_id", Uuid(), primary_key=True),
+        Column("champion_driver_id", Uuid()),
+        Column("champion_constructor_id", Uuid()),
+    )
 
     with gold_engine.connect() as connection:
         standings = connection.execute(
@@ -790,7 +796,9 @@ def _finalize_season_champion(gold_engine: Engine, season: int, *, pipeline_vers
             .where(dim_season.c.season_id == season_id)
             .values(
                 champion_driver=standings.full_name,
+                champion_driver_id=standings.driver_id,
                 champion_constructor=champion_constructor,
+                champion_constructor_id=standings.team_id,
                 updated_at=func.now(),
             )
         )
@@ -798,14 +806,27 @@ def _finalize_season_champion(gold_engine: Engine, season: int, *, pipeline_vers
 
 
 def _finalize_driver_world_titles(gold_engine: Engine, *, pipeline_version: str) -> None:
-    """Set every `dim_driver.world_titles` from how many `dim_season` rows name them `champion_driver`.
+    """Set every `dim_driver.world_titles` from how many `dim_season` rows name them `champion_driver_id`.
 
     Global (not scoped to one season) — a driver's title count only ever
     grows as more seasons are transformed, so this is always recomputed
     from every `dim_season` row currently in Gold, not just the season
     `run_transform` was invoked for.
+
+    Counts by `champion_driver_id` (a FK into `dim_driver`), not by the
+    `champion_driver` display-name string — two drivers sharing an
+    identical full name, or a later name correction, would otherwise
+    silently misattribute a championship count to the wrong driver (Phase
+    7 audit, Critical). Seasons transformed before this ID column existed
+    have `champion_driver_id IS NULL` and are simply excluded until
+    re-transformed, rather than falling back to the unsafe name match.
     """
-    dim_season = reflect_table(gold_engine, "dim_season", Column("season_id", Uuid(), primary_key=True))
+    dim_season = reflect_table(
+        gold_engine,
+        "dim_season",
+        Column("season_id", Uuid(), primary_key=True),
+        Column("champion_driver_id", Uuid()),
+    )
     dim_driver = reflect_table(
         gold_engine,
         "dim_driver",
@@ -814,22 +835,24 @@ def _finalize_driver_world_titles(gold_engine: Engine, *, pipeline_version: str)
     )
 
     with gold_engine.connect() as connection:
-        champions = [
+        champion_ids = [
             row[0]
             for row in connection.execute(
-                select(dim_season.c.champion_driver).where(dim_season.c.champion_driver.is_not(None))
+                select(dim_season.c.champion_driver_id).where(
+                    dim_season.c.champion_driver_id.is_not(None)
+                )
             )
         ]
-        title_counts: dict[str, int] = defaultdict(int)
-        for name in champions:
-            title_counts[name] += 1
+        title_counts: dict[Any, int] = defaultdict(int)
+        for driver_id in champion_ids:
+            title_counts[driver_id] += 1
 
-        driver_rows = connection.execute(select(dim_driver.c.driver_id, dim_driver.c.full_name)).all()
-        for driver_id, full_name in driver_rows:
+        driver_rows = connection.execute(select(dim_driver.c.driver_id)).all()
+        for (driver_id,) in driver_rows:
             connection.execute(
                 dim_driver.update()
                 .where(dim_driver.c.driver_id == driver_id)
-                .values(world_titles=title_counts.get(full_name, 0), updated_at=func.now())
+                .values(world_titles=title_counts.get(driver_id, 0), updated_at=func.now())
             )
         connection.commit()
 

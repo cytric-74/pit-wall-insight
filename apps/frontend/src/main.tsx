@@ -4,6 +4,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router";
 
+import { ErrorBoundary } from "./lib/error-boundary.js";
 import { queryClient } from "./lib/query-client.js";
 import { router } from "./routes/router.js";
 import "./styles/globals.css";
@@ -16,14 +17,16 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <PreferencesProvider>
-        <ThemeProvider>
-          <TooltipProvider>
-            <RouterProvider router={router} />
-          </TooltipProvider>
-        </ThemeProvider>
-      </PreferencesProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <PreferencesProvider>
+          <ThemeProvider>
+            <TooltipProvider>
+              <RouterProvider router={router} />
+            </TooltipProvider>
+          </ThemeProvider>
+        </PreferencesProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );

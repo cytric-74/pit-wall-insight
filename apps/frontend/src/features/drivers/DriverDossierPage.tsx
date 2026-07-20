@@ -11,6 +11,7 @@ import {
 import { useState } from "react";
 
 import { resolveConstructorId } from "../../lib/constructor-id.js";
+import { QueryError } from "../../lib/query-error.js";
 import { useCurrentSeasonRaces } from "../races/queries.js";
 import { useSessionResultsForRaces } from "../sessions/queries.js";
 import {
@@ -56,6 +57,7 @@ export function DriverDossierPage() {
   const races = racesQuery.data ?? [];
   const resultsQueries = useSessionResultsForRaces(races);
   const resultsLoading = resultsQueries.some((query) => query.isPending);
+  const resultsError = racesQuery.isError || resultsQueries.some((query) => query.isError);
   const latestRace = races[races.length - 1];
 
   const driverLapsQuery = useDriverLaps(
@@ -90,7 +92,9 @@ export function DriverDossierPage() {
     <>
       <Hero
         eyebrow="Driver Dossier"
-        title={driver?.fullName ?? "Loading driver…"}
+        title={
+          driverQuery.isError ? "Couldn't load driver" : (driver?.fullName ?? "Loading driver…")
+        }
         description={[
           driver?.driverNumber != null ? `#${driver.driverNumber}` : null,
           driver?.team,
@@ -133,18 +137,26 @@ export function DriverDossierPage() {
             }
             className="sm:col-span-2 laptop:col-span-12"
           >
-            <LineChart
-              categories={pace.categories}
-              series={[
-                { name: driver?.abbreviation ?? "Driver", data: pace.driverData, ...primaryColor },
-                ...(pace.teammateData && teammate
-                  ? [{ name: teammate.fullName, data: pace.teammateData, ...secondaryColor }]
-                  : []),
-              ]}
-              yAxisLabel="Lap time (s)"
-              valueFormatter={(value) => `${value.toFixed(1)}s`}
-              ariaLabel={`${driver?.fullName ?? "Driver"} race pace compared with teammate`}
-            />
+            {driverLapsQuery.isError || teammateLapsQuery.isError ? (
+              <QueryError />
+            ) : (
+              <LineChart
+                categories={pace.categories}
+                series={[
+                  {
+                    name: driver?.abbreviation ?? "Driver",
+                    data: pace.driverData,
+                    ...primaryColor,
+                  },
+                  ...(pace.teammateData && teammate
+                    ? [{ name: teammate.fullName, data: pace.teammateData, ...secondaryColor }]
+                    : []),
+                ]}
+                yAxisLabel="Lap time (s)"
+                valueFormatter={(value) => `${value.toFixed(1)}s`}
+                ariaLabel={`${driver?.fullName ?? "Driver"} race pace compared with teammate`}
+              />
+            )}
           </Widget>
 
           <Widget
@@ -153,24 +165,28 @@ export function DriverDossierPage() {
             loading={resultsLoading}
             className="laptop:col-span-6"
           >
-            <BarChart
-              categories={qualifyingVsRaceRows.map((row) => `R${row.round}`)}
-              series={[
-                {
-                  name: "Qualifying",
-                  data: qualifyingVsRaceRows.map((row) => row.grid!),
-                  ...secondaryColor,
-                },
-                {
-                  name: "Race",
-                  data: qualifyingVsRaceRows.map((row) => row.finish!),
-                  ...primaryColor,
-                },
-              ]}
-              yAxisLabel="Position"
-              valueFormatter={(value) => `P${value}`}
-              ariaLabel={`${driver?.fullName ?? "Driver"} qualifying versus race positions`}
-            />
+            {resultsError ? (
+              <QueryError />
+            ) : (
+              <BarChart
+                categories={qualifyingVsRaceRows.map((row) => `R${row.round}`)}
+                series={[
+                  {
+                    name: "Qualifying",
+                    data: qualifyingVsRaceRows.map((row) => row.grid!),
+                    ...secondaryColor,
+                  },
+                  {
+                    name: "Race",
+                    data: qualifyingVsRaceRows.map((row) => row.finish!),
+                    ...primaryColor,
+                  },
+                ]}
+                yAxisLabel="Position"
+                valueFormatter={(value) => `P${value}`}
+                ariaLabel={`${driver?.fullName ?? "Driver"} qualifying versus race positions`}
+              />
+            )}
           </Widget>
 
           <Widget
@@ -179,20 +195,24 @@ export function DriverDossierPage() {
             loading={resultsLoading}
             className="laptop:col-span-6"
           >
-            <LineChart
-              categories={progressionRows.map((row) => `R${row.round}`)}
-              series={[
-                {
-                  name: driver?.abbreviation ?? "Driver",
-                  data: progressionRows.map((row) => row.finish!),
-                  ...primaryColor,
-                },
-              ]}
-              yAxisLabel="Finish"
-              yAxisInverse
-              valueFormatter={(value) => `P${value}`}
-              ariaLabel={`${driver?.fullName ?? "Driver"} finishing position progression`}
-            />
+            {resultsError ? (
+              <QueryError />
+            ) : (
+              <LineChart
+                categories={progressionRows.map((row) => `R${row.round}`)}
+                series={[
+                  {
+                    name: driver?.abbreviation ?? "Driver",
+                    data: progressionRows.map((row) => row.finish!),
+                    ...primaryColor,
+                  },
+                ]}
+                yAxisLabel="Finish"
+                yAxisInverse
+                valueFormatter={(value) => `P${value}`}
+                ariaLabel={`${driver?.fullName ?? "Driver"} finishing position progression`}
+              />
+            )}
           </Widget>
 
           <Widget

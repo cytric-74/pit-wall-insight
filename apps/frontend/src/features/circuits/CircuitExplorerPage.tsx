@@ -1,6 +1,7 @@
 import { Container, Hero, Select, Widget, WidgetGrid } from "@pit-wall-insight/ui";
 import { useState } from "react";
 
+import { QueryError } from "../../lib/query-error.js";
 import { useCircuit, useCircuitHistory, useCircuitRecords, useCircuits } from "./queries.js";
 import { TrackShape } from "./TrackShape.js";
 import { pickTrackShape } from "./utils.js";
@@ -41,12 +42,17 @@ export function CircuitExplorerPage() {
     <>
       <Hero
         eyebrow="Circuit Explorer"
-        title={circuit?.name ?? "Loading circuit…"}
+        title={
+          circuitQuery.isError ? "Couldn't load circuit" : (circuit?.name ?? "Loading circuit…")
+        }
         description={[circuit?.city, circuit?.country]
           .filter((part): part is string => Boolean(part))
           .join(", ")}
         stats={[
-          { label: "Races hosted", value: historyQuery.isPending ? "—" : String(history.length) },
+          {
+            label: "Races hosted",
+            value: historyQuery.isPending || historyQuery.isError ? "—" : String(history.length),
+          },
           {
             label: "Fastest lap",
             value: record?.lapTime != null ? `${record.lapTime.toFixed(3)}s` : "—",
@@ -95,24 +101,28 @@ export function CircuitExplorerPage() {
             loading={historyQuery.isPending}
             className="laptop:col-span-6"
           >
-            <ol className="flex flex-col gap-2">
-              {history.map((entry) => (
-                <li
-                  key={`${entry.season}-${entry.round}`}
-                  className="flex items-center justify-between border-b border-border-subtle pb-2 last:border-b-0 last:pb-0"
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="font-mono text-caption tabular-nums text-text-muted">
-                      {entry.season}
+            {historyQuery.isError ? (
+              <QueryError />
+            ) : (
+              <ol className="flex flex-col gap-2">
+                {history.map((entry) => (
+                  <li
+                    key={`${entry.season}-${entry.round}`}
+                    className="flex items-center justify-between border-b border-border-subtle pb-2 last:border-b-0 last:pb-0"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="font-mono text-caption tabular-nums text-text-muted">
+                        {entry.season}
+                      </span>
+                      <span className="text-body-sm text-text-primary">{entry.winner ?? "—"}</span>
                     </span>
-                    <span className="text-body-sm text-text-primary">{entry.winner ?? "—"}</span>
-                  </span>
-                  <span className="text-caption uppercase tracking-wide text-text-muted">
-                    {entry.raceName ?? "—"}
-                  </span>
-                </li>
-              ))}
-            </ol>
+                    <span className="text-caption uppercase tracking-wide text-text-muted">
+                      {entry.raceName ?? "—"}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
           </Widget>
         </WidgetGrid>
       </Container>

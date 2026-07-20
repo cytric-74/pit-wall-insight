@@ -10,6 +10,7 @@ import {
 } from "@pit-wall-insight/ui";
 import { useState } from "react";
 
+import { QueryError } from "../../lib/query-error.js";
 import { useRacePitstops, useRaces, useRaceStrategy } from "../races/queries.js";
 import { useTyreDegradation } from "./queries.js";
 import {
@@ -69,7 +70,9 @@ export function StrategyLabPage() {
     <>
       <Hero
         eyebrow="Strategy Lab"
-        title={selectedRace?.raceName ?? "Loading race…"}
+        title={
+          racesQuery.isError ? "Couldn't load race" : (selectedRace?.raceName ?? "Loading race…")
+        }
         {...(selectedRace?.circuit !== undefined && selectedRace?.circuit !== null
           ? { description: selectedRace.circuit }
           : {})}
@@ -102,33 +105,37 @@ export function StrategyLabPage() {
             loading={strategyQuery.isPending}
             className="sm:col-span-2 laptop:col-span-12"
           >
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 laptop:grid-cols-3">
-              {driverStrategies.map((driver) => (
-                <div key={driver.driver} className="flex flex-col gap-2">
-                  <span className="text-caption uppercase tracking-wide text-text-muted">
-                    {driver.driver}
-                  </span>
-                  <ol className="flex flex-col gap-2">
-                    {driver.stints.map((stint) => (
-                      <li
-                        key={`${stint.compound}-${stint.startLap}`}
-                        className="flex items-center justify-between gap-3 border-b border-border-subtle pb-2 last:border-b-0 last:pb-0"
-                      >
-                        <Badge variant={resolveCompoundBadgeVariant(stint.compound)}>
-                          {stint.compound ?? "Unknown"}
-                        </Badge>
-                        <span className="font-mono text-caption tabular-nums text-text-muted">
-                          L{stint.startLap}–{stint.endLap}
-                        </span>
-                        <span className="text-body-sm text-text-secondary">
-                          {stint.lapCount} laps
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              ))}
-            </div>
+            {strategyQuery.isError ? (
+              <QueryError />
+            ) : (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 laptop:grid-cols-3">
+                {driverStrategies.map((driver) => (
+                  <div key={driver.driver} className="flex flex-col gap-2">
+                    <span className="text-caption uppercase tracking-wide text-text-muted">
+                      {driver.driver}
+                    </span>
+                    <ol className="flex flex-col gap-2">
+                      {driver.stints.map((stint) => (
+                        <li
+                          key={`${stint.compound}-${stint.startLap}`}
+                          className="flex items-center justify-between gap-3 border-b border-border-subtle pb-2 last:border-b-0 last:pb-0"
+                        >
+                          <Badge variant={resolveCompoundBadgeVariant(stint.compound)}>
+                            {stint.compound ?? "Unknown"}
+                          </Badge>
+                          <span className="font-mono text-caption tabular-nums text-text-muted">
+                            L{stint.startLap}–{stint.endLap}
+                          </span>
+                          <span className="text-body-sm text-text-secondary">
+                            {stint.lapCount} laps
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+              </div>
+            )}
           </Widget>
 
           <Widget

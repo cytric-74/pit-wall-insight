@@ -93,6 +93,52 @@ async def test_dim_season_round_trips(session_factory: async_sessionmaker[AsyncS
         assert fetched is not None
         assert fetched.year == 2024
         assert fetched.champion_driver == "Max Verstappen"
+        assert fetched.champion_driver_id is None
+        assert fetched.champion_constructor_id is None
+
+
+async def test_dim_season_champion_id_columns_round_trip(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    driver_id = _new_id()
+    constructor_id = _new_id()
+    async with session_factory() as session:
+        session.add(
+            DimConstructor(
+                constructor_id=constructor_id,
+                source="transform",
+                pipeline_version="0.1.0",
+                team_name="Red Bull Racing",
+            )
+        )
+        session.add(
+            DimDriver(
+                driver_id=driver_id,
+                source="transform",
+                pipeline_version="0.1.0",
+                full_name="Max Verstappen",
+                team_id=constructor_id,
+            )
+        )
+        season = DimSeason(
+            season_id=_new_id(),
+            source="transform",
+            pipeline_version="0.1.0",
+            year=2024,
+            race_count=24,
+            champion_driver="Max Verstappen",
+            champion_constructor="Red Bull Racing",
+            champion_driver_id=driver_id,
+            champion_constructor_id=constructor_id,
+        )
+        session.add(season)
+        await session.commit()
+
+    async with session_factory() as session:
+        fetched = await session.get(DimSeason, season.season_id)
+        assert fetched is not None
+        assert fetched.champion_driver_id == driver_id
+        assert fetched.champion_constructor_id == constructor_id
 
 
 async def test_dim_driver_foreign_key_to_dim_constructor(

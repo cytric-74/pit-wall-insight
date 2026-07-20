@@ -13,6 +13,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { resolveConstructorId } from "../../lib/constructor-id.js";
+import { QueryError } from "../../lib/query-error.js";
 import { useCurrentSeasonRaces } from "../races/queries.js";
 import { useSessionResultsForRaces } from "../sessions/queries.js";
 import {
@@ -74,6 +75,7 @@ export function ConstructorIntelligencePage() {
   const races = racesQuery.data ?? [];
   const resultsQueries = useSessionResultsForRaces(races);
   const resultsLoading = resultsQueries.some((query) => query.isPending);
+  const resultsError = racesQuery.isError || resultsQueries.some((query) => query.isError);
 
   const driverNames = rosterDrivers.map((driver) => driver.fullName);
   const teamPointsPerRound = extractTeamPointsByRound(races, resultsQueries, driverNames);
@@ -95,7 +97,11 @@ export function ConstructorIntelligencePage() {
     <>
       <Hero
         eyebrow="Constructor Intelligence"
-        title={team?.teamName ?? "Loading constructor…"}
+        title={
+          constructorQuery.isError
+            ? "Couldn't load constructor"
+            : (team?.teamName ?? "Loading constructor…")
+        }
         {...(team?.baseCountry !== undefined && team?.baseCountry !== null
           ? { description: team.baseCountry }
           : {})}
@@ -127,13 +133,17 @@ export function ConstructorIntelligencePage() {
             loading={resultsLoading}
             className="sm:col-span-2 laptop:col-span-12"
           >
-            <AreaChart
-              categories={races.map((race) => `R${race.round}`)}
-              series={[{ name: team?.teamName ?? "Team", data: cumulativePoints }]}
-              yAxisLabel="Points"
-              valueFormatter={(value) => `${value} pts`}
-              ariaLabel={`${team?.teamName ?? "Constructor"} championship points progression`}
-            />
+            {resultsError ? (
+              <QueryError />
+            ) : (
+              <AreaChart
+                categories={races.map((race) => `R${race.round}`)}
+                series={[{ name: team?.teamName ?? "Team", data: cumulativePoints }]}
+                yAxisLabel="Points"
+                valueFormatter={(value) => `${value} pts`}
+                ariaLabel={`${team?.teamName ?? "Constructor"} championship points progression`}
+              />
+            )}
           </Widget>
 
           <Widget
@@ -142,18 +152,22 @@ export function ConstructorIntelligencePage() {
             loading={performanceQuery.isPending}
             className="laptop:col-span-6"
           >
-            <LineChart
-              categories={pitStopRows.map((entry) => String(entry.season))}
-              series={[
-                {
-                  name: team?.teamName ?? "Team",
-                  data: pitStopRows.map((entry) => entry.pitstopAverage!),
-                },
-              ]}
-              yAxisLabel="Seconds"
-              valueFormatter={(value) => `${value.toFixed(1)}s`}
-              ariaLabel={`${team?.teamName ?? "Constructor"} average pit stop time per season`}
-            />
+            {performanceQuery.isError ? (
+              <QueryError />
+            ) : (
+              <LineChart
+                categories={pitStopRows.map((entry) => String(entry.season))}
+                series={[
+                  {
+                    name: team?.teamName ?? "Team",
+                    data: pitStopRows.map((entry) => entry.pitstopAverage!),
+                  },
+                ]}
+                yAxisLabel="Seconds"
+                valueFormatter={(value) => `${value.toFixed(1)}s`}
+                ariaLabel={`${team?.teamName ?? "Constructor"} average pit stop time per season`}
+              />
+            )}
           </Widget>
 
           <Widget
@@ -162,16 +176,20 @@ export function ConstructorIntelligencePage() {
             loading={resultsLoading || driversQuery.isPending}
             className="laptop:col-span-6"
           >
-            <BarChart
-              categories={races.map((race) => `R${race.round}`)}
-              series={driverPointsPerRound.map((entry) => ({
-                name: entry.driver,
-                data: entry.points,
-              }))}
-              yAxisLabel="Points"
-              valueFormatter={(value) => `${value} pts`}
-              ariaLabel={`${team?.teamName ?? "Constructor"} driver points comparison`}
-            />
+            {resultsError || driversQuery.isError ? (
+              <QueryError />
+            ) : (
+              <BarChart
+                categories={races.map((race) => `R${race.round}`)}
+                series={driverPointsPerRound.map((entry) => ({
+                  name: entry.driver,
+                  data: entry.points,
+                }))}
+                yAxisLabel="Points"
+                valueFormatter={(value) => `${value} pts`}
+                ariaLabel={`${team?.teamName ?? "Constructor"} driver points comparison`}
+              />
+            )}
           </Widget>
 
           <Widget
@@ -180,24 +198,28 @@ export function ConstructorIntelligencePage() {
             loading={statisticsQuery.isPending}
             className="laptop:col-span-6"
           >
-            <dl className="flex flex-col gap-3">
-              <ReliabilityRow
-                label="Seasons competed"
-                value={statistics ? String(statistics.seasonsCompeted) : "—"}
-              />
-              <ReliabilityRow
-                label="DNF rate"
-                value={
-                  statistics?.dnfRate != null ? `${(statistics.dnfRate * 100).toFixed(0)}%` : "—"
-                }
-              />
-              <ReliabilityRow
-                label="Avg. points per race"
-                value={
-                  statistics?.averagePoints != null ? statistics.averagePoints.toFixed(1) : "—"
-                }
-              />
-            </dl>
+            {statisticsQuery.isError ? (
+              <QueryError />
+            ) : (
+              <dl className="flex flex-col gap-3">
+                <ReliabilityRow
+                  label="Seasons competed"
+                  value={statistics ? String(statistics.seasonsCompeted) : "—"}
+                />
+                <ReliabilityRow
+                  label="DNF rate"
+                  value={
+                    statistics?.dnfRate != null ? `${(statistics.dnfRate * 100).toFixed(0)}%` : "—"
+                  }
+                />
+                <ReliabilityRow
+                  label="Avg. points per race"
+                  value={
+                    statistics?.averagePoints != null ? statistics.averagePoints.toFixed(1) : "—"
+                  }
+                />
+              </dl>
+            )}
           </Widget>
 
           <Widget
