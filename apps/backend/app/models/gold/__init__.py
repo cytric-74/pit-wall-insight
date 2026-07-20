@@ -1,4 +1,4 @@
-"""Gold-layer (`dim_*`/`fct_*`) SQLAlchemy ORM models (docs/07_DATABASE_SCHEMA.md).
+"""Gold-layer (`dim_*`/`fct_*`/`mart_*`) SQLAlchemy ORM models (docs/07_DATABASE_SCHEMA.md).
 
 Purpose
 -------
@@ -24,17 +24,25 @@ Primary keys use the entity-specific names docs/07_DATABASE_SCHEMA.md's
 `season_id`, ...) rather than Bronze's generic `id` — see
 `app/models/mixins.py` for why that split exists.
 
-Out of scope this phase (deferred, see docs/07_DATABASE_SCHEMA.md's full
-list): `mart_*` tables (aggregated, business-ready views built on top of
-these dimensions/facts — a distinct, later phase) and anything telemetry-
-or strategy-related (`fct_telemetry`, `mart_strategy_analysis`,
-`mart_telemetry_summary`), consistent with earlier phases' scope.
+Marts (`mart_dashboard`, `mart_driver_summary`, `mart_constructor_summary`,
+`mart_race_summary`) sit on top of the dimensions/facts above — aggregated,
+business-ready views a dashboard or API endpoint reads directly rather than
+computing the same joins/aggregations itself on every request. Two of them
+(`mart_driver_summary`, `mart_constructor_summary`) add a `season_id` scope
+beyond docs/07's literal column list — see those models' docstrings for
+why. Still out of scope (deferred, consistent with every earlier phase):
+anything telemetry- or strategy-related (`fct_telemetry`,
+`mart_strategy_analysis`, `mart_telemetry_summary`).
 """
 
 from app.models.gold.circuit import DimCircuit
 from app.models.gold.constructor import DimConstructor
 from app.models.gold.driver import DimDriver
 from app.models.gold.lap import FctLap
+from app.models.gold.mart_constructor_summary import MartConstructorSummary
+from app.models.gold.mart_dashboard import MartDashboard
+from app.models.gold.mart_driver_summary import MartDriverSummary
+from app.models.gold.mart_race_summary import MartRaceSummary
 from app.models.gold.pitstop import FctPitstop
 from app.models.gold.result import FctResult
 from app.models.gold.season import DimSeason
@@ -51,4 +59,8 @@ __all__ = [
     "FctLap",
     "FctPitstop",
     "FctResult",
+    "MartConstructorSummary",
+    "MartDashboard",
+    "MartDriverSummary",
+    "MartRaceSummary",
 ]

@@ -8,14 +8,12 @@ imported anywhere — Alembic autogenerate (both `alembic/` for raw and
 that side effect rather than each having to remember which model modules
 to import individually.
 
-Raw (`app/models/raw/`) and Gold (`app/models/gold/`) models attach to two
-separate declarative bases with two separate `metadata` objects, even
-though both are imported here — importing this module is what makes
-either metadata "complete," but which of the two a given Alembic
-environment or test actually acts on depends on which `Base` it reads
-(see `alembic/env.py` vs `alembic_gold/env.py`).
-
-Marts (`mart_*`) remain a future phase — see docs/07_DATABASE_SCHEMA.md.
+Raw (`app/models/raw/`) and Gold (`app/models/gold/`, including marts) models
+attach to two separate declarative bases with two separate `metadata`
+objects, even though both are imported here — importing this module is
+what makes either metadata "complete," but which of the two a given
+Alembic environment or test actually acts on depends on which `Base` it
+reads (see `alembic/env.py` vs `alembic_gold/env.py`).
 """
 
 from app.models.gold import (
@@ -28,6 +26,10 @@ from app.models.gold import (
     FctLap,
     FctPitstop,
     FctResult,
+    MartConstructorSummary,
+    MartDashboard,
+    MartDriverSummary,
+    MartRaceSummary,
 )
 from app.models.raw import (
     RawCircuit,
@@ -49,6 +51,10 @@ __all__ = [
     "FctLap",
     "FctPitstop",
     "FctResult",
+    "MartConstructorSummary",
+    "MartDashboard",
+    "MartDriverSummary",
+    "MartRaceSummary",
     "RawCircuit",
     "RawConstructor",
     "RawDriver",

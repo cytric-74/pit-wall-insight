@@ -71,6 +71,10 @@ def test_offline_gold_upgrade_emits_create_table_for_every_gold_table(capsys) ->
         "fct_results",
         "fct_laps",
         "fct_pitstop",
+        "mart_dashboard",
+        "mart_driver_summary",
+        "mart_constructor_summary",
+        "mart_race_summary",
     ):
         assert f"CREATE TABLE {table_name}" in emitted_sql, (
             f"Expected offline gold migration output to create {table_name}"

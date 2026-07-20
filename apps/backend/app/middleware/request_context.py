@@ -32,6 +32,12 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         request.state.request_id = request_id
 
         start_time = time.perf_counter()
+        # Also stashed on `request.state` (not just used locally here) so
+        # `app.utils.responses.build_meta` can compute the same elapsed time
+        # for the response body's `meta.execution_time` field — the one
+        # place other than this middleware that needs to know when the
+        # request started.
+        request.state.start_time = start_time
         response = await call_next(request)
         duration_ms = (time.perf_counter() - start_time) * 1000
 

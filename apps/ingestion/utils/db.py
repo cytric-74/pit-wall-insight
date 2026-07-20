@@ -84,8 +84,16 @@ def upsert(
     Outputs: the number of rows submitted (not necessarily the number of
     *new* rows created, since some may have updated an existing row).
 
-    Time complexity: O(1) round trip regardless of `len(rows)` — every row
-    is submitted in a single multi-row `INSERT`, not one statement per row.
+    Time complexity: O(ceil(len(rows) / batch_size)) round trips, each a
+    single multi-row `INSERT` covering a batch of rows rather than one
+    statement per row. Batching (rather than one statement for every row in
+    `rows`) exists because a single multi-row `INSERT` binds one parameter
+    per cell — SQLite's driver rejects a statement once its bound-parameter
+    count exceeds a few hundred/thousand (the exact ceiling varies by
+    build), which real per-race data (e.g. 1000+ laps in one round) exceeds
+    well before Postgres would ever be at risk. `_batch_size_for` picks a
+    per-call batch size low enough to stay safely under SQLite's limit
+    regardless of how many columns `table` has.
     """
     if not rows:
         return 0
@@ -106,40 +114,59 @@ def upsert(
             f"upsert is only implemented for postgresql and sqlite, got {dialect!r}"
         )
 
-    statement = dialect_insert(table).values(rows)
-
-    if update_columns is not None:
-        update_values: dict[str, Any] = {
-            column_name: statement.excluded[column_name] for column_name in update_columns
-        }
-    else:
-        # The primary key (whatever it's actually named — `id` on Bronze
-        # tables, `driver_id`/`season_id`/etc. on Gold ones) must never
-        # appear in the UPDATE SET clause, alongside `created_at` (set once,
-        # at insert, never again) and the natural-key columns driving the
-        # conflict itself (redundant to re-set, since they're equal
-        # already).
-        never_update = {
-            *(column.name for column in table.primary_key.columns),
-            "created_at",
-            *conflict_columns,
-        }
-        update_values = {
-            column.name: column
-            for column in statement.excluded
-            if column.name not in never_update
-        }
-
-    # `updated_at` is deliberately re-assigned here even though it may
-    # already be present above (mapped to `excluded.updated_at`, i.e.
-    # whatever NULL/default the INSERT side would have produced, since
-    # callers never pass it themselves) — this explicit assignment is what
-    # actually bumps it to "now" on conflict.
-    update_values["updated_at"] = func.now()
-    statement = statement.on_conflict_do_update(
-        index_elements=conflict_columns, set_=update_values
-    )
+    batch_size = _batch_size_for(len(table.columns))
 
     with engine.begin() as connection:
-        connection.execute(statement)
+        for start in range(0, len(rows), batch_size):
+            batch = rows[start : start + batch_size]
+            statement = dialect_insert(table).values(batch)
+
+            if update_columns is not None:
+                update_values: dict[str, Any] = {
+                    column_name: statement.excluded[column_name] for column_name in update_columns
+                }
+            else:
+                # The primary key (whatever it's actually named — `id` on
+                # Bronze tables, `driver_id`/`season_id`/etc. on Gold ones)
+                # must never appear in the UPDATE SET clause, alongside
+                # `created_at` (set once, at insert, never again) and the
+                # natural-key columns driving the conflict itself (redundant
+                # to re-set, since they're equal already).
+                never_update = {
+                    *(column.name for column in table.primary_key.columns),
+                    "created_at",
+                    *conflict_columns,
+                }
+                update_values = {
+                    column.name: column
+                    for column in statement.excluded
+                    if column.name not in never_update
+                }
+
+            # `updated_at` is deliberately re-assigned here even though it
+            # may already be present above (mapped to `excluded.updated_at`,
+            # i.e. whatever NULL/default the INSERT side would have
+            # produced, since callers never pass it themselves) — this
+            # explicit assignment is what actually bumps it to "now" on
+            # conflict.
+            update_values["updated_at"] = func.now()
+            statement = statement.on_conflict_do_update(
+                index_elements=conflict_columns, set_=update_values
+            )
+            connection.execute(statement)
+
     return len(rows)
+
+
+def _batch_size_for(column_count: int) -> int:
+    """How many rows one `upsert` batch may hold, given `table` has `column_count` columns.
+
+    SQLite's compiled-in bound-parameter ceiling (`SQLITE_MAX_VARIABLE_NUMBER`)
+    is as low as 999 on some builds; this keeps each batch's total bound
+    parameters (`column_count * batch_size`) safely under that regardless of
+    how wide a table is, while still batching hundreds of rows per round
+    trip for narrow tables. Postgres's own limit (65535) is high enough that
+    this same conservative batch size never becomes the bottleneck there.
+    """
+    max_variables_per_statement = 900
+    return max(1, max_variables_per_statement // column_count)

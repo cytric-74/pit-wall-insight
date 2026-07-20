@@ -39,6 +39,10 @@ from app.models import (
     DimWeather,
     FctLap,
     FctResult,
+    MartConstructorSummary,
+    MartDashboard,
+    MartDriverSummary,
+    MartRaceSummary,
 )
 
 
@@ -288,3 +292,191 @@ async def test_dim_circuit_and_dim_weather_round_trip(
         assert fetched_circuit.latitude == 26.0325
         assert fetched_weather is not None
         assert fetched_weather.rainfall is False
+
+
+async def _seed_season_driver_and_session(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID, uuid.UUID]:
+    """Shared setup for the mart tests below: a season, a constructor, a
+    driver on that constructor's team, and a race session — the minimum
+    dimensional scaffolding every mart foreign-keys against. Returns
+    (season_id, constructor_id, driver_id, session_id)."""
+    season_id = _new_id()
+    constructor_id = _new_id()
+    driver_id = _new_id()
+    session_id = _new_id()
+
+    async with session_factory() as session:
+        session.add(
+            DimSeason(
+                season_id=season_id,
+                source="transform",
+                pipeline_version="0.1.0",
+                year=2024,
+                race_count=24,
+            )
+        )
+        session.add(
+            DimConstructor(
+                constructor_id=constructor_id,
+                source="transform",
+                pipeline_version="0.1.0",
+                team_name="Red Bull Racing",
+            )
+        )
+        await session.commit()
+
+    async with session_factory() as session:
+        session.add(
+            DimDriver(
+                driver_id=driver_id,
+                source="transform",
+                pipeline_version="0.1.0",
+                full_name="Max Verstappen",
+                abbreviation="VER",
+                team_id=constructor_id,
+            )
+        )
+        session.add(
+            DimSession(
+                session_id=session_id,
+                source="transform",
+                pipeline_version="0.1.0",
+                season_id=season_id,
+                round_number=1,
+                session_type="R",
+            )
+        )
+        await session.commit()
+
+    return season_id, constructor_id, driver_id, session_id
+
+
+async def test_mart_dashboard_round_trips_and_is_keyed_by_season(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    season_id, _constructor_id, _driver_id, _session_id = await _seed_season_driver_and_session(
+        session_factory
+    )
+
+    async with session_factory() as session:
+        session.add(
+            MartDashboard(
+                season_id=season_id,
+                source="transform",
+                pipeline_version="0.1.0",
+                season=2024,
+                drivers=20,
+                constructors=10,
+                races=24,
+                fastest_pitstop=1.98,
+                average_overtakes=12.5,
+                fastest_lap_time=91.447,
+                fastest_lap_driver="Max Verstappen",
+                championship_gap=8.0,
+            )
+        )
+        await session.commit()
+
+    async with session_factory() as session:
+        fetched = await session.get(MartDashboard, season_id)
+        assert fetched is not None
+        assert fetched.season == 2024
+        assert fetched.fastest_lap_driver == "Max Verstappen"
+
+
+async def test_mart_driver_summary_natural_key_uniqueness_is_enforced(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    season_id, _constructor_id, driver_id, _session_id = await _seed_season_driver_and_session(
+        session_factory
+    )
+
+    common = {
+        "source": "transform",
+        "pipeline_version": "0.1.0",
+        "season_id": season_id,
+        "driver_id": driver_id,
+        "driver": "Max Verstappen",
+        "wins": 1,
+        "podiums": 1,
+        "poles": 0,
+        "fastest_laps": 1,
+    }
+    async with session_factory() as session:
+        session.add(MartDriverSummary(mart_driver_summary_id=_new_id(), **common))
+        await session.commit()
+
+    async with session_factory() as session:
+        session.add(MartDriverSummary(mart_driver_summary_id=_new_id(), **common))
+        with pytest.raises(IntegrityError):
+            await session.commit()
+
+
+async def test_mart_constructor_summary_round_trips(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    season_id, constructor_id, _driver_id, _session_id = await _seed_season_driver_and_session(
+        session_factory
+    )
+
+    async with session_factory() as session:
+        session.add(
+            MartConstructorSummary(
+                mart_constructor_summary_id=_new_id(),
+                source="transform",
+                pipeline_version="0.1.0",
+                season_id=season_id,
+                constructor_id=constructor_id,
+                constructor="Red Bull Racing",
+                wins=1,
+                podiums=1,
+                pitstop_average=2.3,
+                average_points=25.0,
+                dnf_rate=0.0,
+            )
+        )
+        await session.commit()
+
+    async with session_factory() as session:
+        fetched = (
+            await session.execute(
+                MartConstructorSummary.__table__.select().where(
+                    MartConstructorSummary.season_id == season_id
+                )
+            )
+        ).mappings().one()
+        assert fetched["constructor"] == "Red Bull Racing"
+        assert fetched["strategy_success"] is None  # no source — see model docstring
+        assert fetched["development_index"] is None
+
+
+async def test_mart_race_summary_is_keyed_by_session(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    _season_id, _constructor_id, _driver_id, session_id = await _seed_season_driver_and_session(
+        session_factory
+    )
+
+    async with session_factory() as session:
+        session.add(
+            MartRaceSummary(
+                session_id=session_id,
+                source="transform",
+                pipeline_version="0.1.0",
+                race="Bahrain Grand Prix",
+                winner="Max Verstappen",
+                fastest_lap="Max Verstappen",
+                average_pitstop=2.3,
+                weather="Dry",
+                retirements=2,
+            )
+        )
+        await session.commit()
+
+    async with session_factory() as session:
+        fetched = await session.get(MartRaceSummary, session_id)
+        assert fetched is not None
+        assert fetched.winner == "Max Verstappen"
+        assert fetched.weather == "Dry"
+        assert fetched.safety_car_laps is None  # no source — see model docstring

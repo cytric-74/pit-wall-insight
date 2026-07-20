@@ -322,6 +322,76 @@ def _build_gold_schema() -> MetaData:
         Column("compound_after", String()),
         UniqueConstraint("session_id", "driver_id", "lap"),
     )
+    Table(
+        "mart_dashboard",
+        metadata,
+        Column("season_id", Uuid(), ForeignKey("dim_season.season_id"), primary_key=True),
+        *_gold_audit_columns(),
+        Column("season", Integer(), nullable=False),
+        Column("drivers", Integer(), nullable=False),
+        Column("constructors", Integer(), nullable=False),
+        Column("races", Integer(), nullable=False),
+        Column("fastest_pitstop", Float()),
+        Column("average_overtakes", Float()),
+        Column("fastest_lap_time", Float()),
+        Column("fastest_lap_driver", String()),
+        Column("championship_gap", Float()),
+    )
+    Table(
+        "mart_driver_summary",
+        metadata,
+        Column("mart_driver_summary_id", Uuid(), primary_key=True),
+        *_gold_audit_columns(),
+        Column("season_id", Uuid(), ForeignKey("dim_season.season_id"), nullable=False),
+        Column("driver_id", Uuid(), ForeignKey("dim_driver.driver_id"), nullable=False),
+        Column("driver", String(), nullable=False),
+        Column("wins", Integer(), nullable=False),
+        Column("podiums", Integer(), nullable=False),
+        Column("poles", Integer(), nullable=False),
+        Column("fastest_laps", Integer(), nullable=False),
+        Column("average_finish", Float()),
+        Column("average_qualifying", Float()),
+        Column("consistency_score", Float()),
+        Column("pit_efficiency", Float()),
+        Column("race_pace", Float()),
+        Column("qualifying_pace", Float()),
+        UniqueConstraint("season_id", "driver_id"),
+    )
+    Table(
+        "mart_constructor_summary",
+        metadata,
+        Column("mart_constructor_summary_id", Uuid(), primary_key=True),
+        *_gold_audit_columns(),
+        Column("season_id", Uuid(), ForeignKey("dim_season.season_id"), nullable=False),
+        Column(
+            "constructor_id", Uuid(), ForeignKey("dim_constructor.constructor_id"), nullable=False
+        ),
+        Column("constructor", String(), nullable=False),
+        Column("wins", Integer(), nullable=False),
+        Column("podiums", Integer(), nullable=False),
+        Column("pitstop_average", Float()),
+        Column("strategy_success", Float()),
+        Column("average_points", Float()),
+        Column("dnf_rate", Float()),
+        Column("development_index", Float()),
+        Column("average_pace", Float()),
+        UniqueConstraint("season_id", "constructor_id"),
+    )
+    Table(
+        "mart_race_summary",
+        metadata,
+        Column("session_id", Uuid(), ForeignKey("dim_session.session_id"), primary_key=True),
+        *_gold_audit_columns(),
+        Column("race", String()),
+        Column("winner", String()),
+        Column("pole", String()),
+        Column("fastest_lap", String()),
+        Column("average_pitstop", Float()),
+        Column("safety_car_laps", Integer()),
+        Column("red_flags", Integer()),
+        Column("weather", String()),
+        Column("retirements", Integer()),
+    )
     return metadata
 
 
@@ -454,6 +524,117 @@ def _seed_bahrain_round_1(raw_engine: Engine) -> None:
             Time=60.0, AirTemp=26.0, TrackTemp=32.0, Humidity=42.0, Pressure=1009.0, Rainfall=False,
             WindDirection=182.0, WindSpeed=1.4,
         ),
+    ]
+    bronze_loader.upsert_weather(
+        raw_engine, weather, season=2024, round_number=1, session_type="R", pipeline_version=PIPELINE_VERSION
+    )
+
+
+def _driver_ref(
+    driver_id: str, code: str, given: str, family: str, dob: str, nationality: str
+) -> RawDriverRef:
+    return RawDriverRef(
+        driverId=driver_id, code=code, givenName=given, familyName=family,
+        dateOfBirth=dob, nationality=nationality,
+    )
+
+
+def _seed_multi_driver_race(raw_engine: Engine) -> None:
+    """Seeds a three-driver, three-constructor round (season 2024, round 1,
+    reusing the Bahrain circuit) with enough spread to make mart
+    aggregations (wins/podiums/pit averages/overtakes/DNF rate)
+    meaningful, which the single-driver `_seed_bahrain_round_1` scenario
+    can't exercise:
+
+    - VER (Red Bull): wins, starts P3, laps improve 3 -> 2 -> 1 (two
+      on-track overtakes), sets the fastest lap, one pit stop (2.3s).
+    - NOR (McLaren): finishes P2 (podium), starts P1 (pole), one pit stop
+      (2.6s), no overtakes of their own.
+    - LEC (Ferrari): retires (`status="Accident"`), unclassified, no
+      fastest lap, no pit stop — exercises `dnf_rate`/`retirements`.
+    """
+    calendar_entry = RawRaceCalendarEntry(
+        season="2024",
+        round="1",
+        raceName="Bahrain Grand Prix",
+        date="2024-03-02",
+        Circuit=RawCircuitRef(
+            circuitId="bahrain",
+            circuitName="Bahrain International Circuit",
+            Location=RawLocation(lat="26.0325", long="50.5106", locality="Sakhir", country="Bahrain"),
+        ),
+    )
+    bronze_loader.upsert_circuits_from_calendar(raw_engine, [calendar_entry], pipeline_version=PIPELINE_VERSION)
+    bronze_loader.upsert_sessions_from_calendar(raw_engine, [calendar_entry], pipeline_version=PIPELINE_VERSION)
+    bronze_loader.upsert_sessions_from_schedule(
+        raw_engine,
+        [
+            RawEventSchedule(
+                RoundNumber=1, EventName="Bahrain Grand Prix", Country="Bahrain", Location="Sakhir",
+                EventDate="2024-03-02T00:00:00", F1ApiSupport=True,
+            )
+        ],
+        pipeline_version=PIPELINE_VERSION,
+    )
+
+    ver = _driver_ref("max_verstappen", "VER", "Max", "Verstappen", "1997-09-30", "Dutch")
+    nor = _driver_ref("lando_norris", "NOR", "Lando", "Norris", "1999-11-13", "British")
+    lec = _driver_ref("charles_leclerc", "LEC", "Charles", "Leclerc", "1997-10-16", "Monegasque")
+    red_bull = RawConstructorRef(constructorId="red_bull", name="Red Bull Racing", nationality="Austrian")
+    mclaren = RawConstructorRef(constructorId="mclaren", name="McLaren", nationality="British")
+    ferrari = RawConstructorRef(constructorId="ferrari", name="Ferrari", nationality="Italian")
+
+    bronze_loader.upsert_drivers(raw_engine, [ver, nor, lec], pipeline_version=PIPELINE_VERSION)
+    bronze_loader.upsert_constructors(raw_engine, [red_bull, mclaren, ferrari], pipeline_version=PIPELINE_VERSION)
+
+    results = [
+        RawSessionResult(
+            DriverNumber="1", Abbreviation="VER", TeamName="Red Bull Racing",
+            Position=1.0, GridPosition=3.0, Points=25.0, Status="Finished",
+        ),
+        RawSessionResult(
+            DriverNumber="4", Abbreviation="NOR", TeamName="McLaren",
+            Position=2.0, GridPosition=1.0, Points=18.0, Status="Finished",
+        ),
+        RawSessionResult(
+            DriverNumber="16", Abbreviation="LEC", TeamName="Ferrari",
+            Position=None, GridPosition=2.0, Points=0.0, Status="Accident",
+        ),
+    ]
+    bronze_loader.upsert_results_fastf1(
+        raw_engine, results, season=2024, round_number=1, session_type="R", pipeline_version=PIPELINE_VERSION
+    )
+
+    laps = [
+        # VER: P3 -> P2 -> P1 -- two genuine overtakes, fastest lap.
+        RawSessionLap(Driver="VER", LapNumber=1.0, LapTime=96.0, Compound="SOFT", Position=3.0),
+        RawSessionLap(Driver="VER", LapNumber=2.0, LapTime=95.5, Compound="SOFT", Position=2.0),
+        RawSessionLap(
+            Driver="VER", LapNumber=18.0, LapTime=97.0, Compound="SOFT", Position=2.0,
+            PitInTime=1024.0, PitOutTime=1046.3,
+        ),
+        RawSessionLap(Driver="VER", LapNumber=19.0, LapTime=91.0, Compound="HARD", Position=1.0),
+        # NOR: P1 -> P1 -> P2 -- no improvements of their own.
+        RawSessionLap(Driver="NOR", LapNumber=1.0, LapTime=96.2, Compound="SOFT", Position=1.0),
+        RawSessionLap(Driver="NOR", LapNumber=2.0, LapTime=95.8, Compound="SOFT", Position=1.0),
+        RawSessionLap(
+            Driver="NOR", LapNumber=17.0, LapTime=97.2, Compound="SOFT", Position=1.0,
+            PitInTime=1000.0, PitOutTime=1022.6,
+        ),
+        RawSessionLap(Driver="NOR", LapNumber=18.0, LapTime=95.9, Compound="HARD", Position=2.0),
+        # LEC: two laps, then retires -- no pit stop, no fastest lap.
+        RawSessionLap(Driver="LEC", LapNumber=1.0, LapTime=96.5, Compound="SOFT", Position=2.0),
+        RawSessionLap(Driver="LEC", LapNumber=2.0, LapTime=96.1, Compound="SOFT", Position=3.0),
+    ]
+    bronze_loader.upsert_laps(
+        raw_engine, laps, season=2024, round_number=1, session_type="R", pipeline_version=PIPELINE_VERSION
+    )
+
+    weather = [
+        RawWeatherSample(
+            Time=0.0, AirTemp=24.0, TrackTemp=30.0, Humidity=40.0, Pressure=1008.0, Rainfall=False,
+            WindDirection=180.0, WindSpeed=1.0,
+        )
     ]
     bronze_loader.upsert_weather(
         raw_engine, weather, season=2024, round_number=1, session_type="R", pipeline_version=PIPELINE_VERSION
@@ -597,3 +778,93 @@ class TestRunTransform:
         assert len(result_rows) == 1  # not duplicated
         assert len(lap_rows) == 3  # not duplicated
         assert season_row["pipeline_version"] == "0.2.0"  # did pick up the second run's value
+
+
+class TestMarts:
+    """Exercises `_transform_marts` (and its four sub-functions) against
+    the three-driver/three-constructor scenario in `_seed_multi_driver_race`
+    — `_seed_bahrain_round_1`'s single-driver scenario can't produce a
+    meaningful winner/podium/DNF spread."""
+
+    def test_mart_driver_summary_reflects_results_and_overtakes(
+        self, raw_engine: Engine, gold_engine: Engine
+    ) -> None:
+        _seed_multi_driver_race(raw_engine)
+        run_transform(raw_engine, gold_engine, season=2024, pipeline_version=PIPELINE_VERSION)
+
+        table = _table(gold_engine, "mart_driver_summary")
+        with gold_engine.connect() as connection:
+            rows = {row["driver"]: row for row in connection.execute(select(table)).mappings().all()}
+
+        assert set(rows) == {"Max Verstappen", "Lando Norris", "Charles Leclerc"}
+
+        ver = rows["Max Verstappen"]
+        assert ver["wins"] == 1
+        assert ver["podiums"] == 1
+        assert ver["fastest_laps"] == 1
+        assert ver["average_finish"] == pytest.approx(1.0)
+        assert ver["pit_efficiency"] == pytest.approx(22.3)  # 1046.3 - 1024.0
+
+        nor = rows["Lando Norris"]
+        assert nor["wins"] == 0
+        assert nor["podiums"] == 1
+        assert nor["poles"] == 1
+        assert nor["fastest_laps"] == 0
+
+        lec = rows["Charles Leclerc"]
+        assert lec["wins"] == 0
+        assert lec["podiums"] == 0
+
+    def test_mart_constructor_summary_reflects_dnf_rate_and_points(
+        self, raw_engine: Engine, gold_engine: Engine
+    ) -> None:
+        _seed_multi_driver_race(raw_engine)
+        run_transform(raw_engine, gold_engine, season=2024, pipeline_version=PIPELINE_VERSION)
+
+        table = _table(gold_engine, "mart_constructor_summary")
+        with gold_engine.connect() as connection:
+            rows = {
+                row["constructor"]: row for row in connection.execute(select(table)).mappings().all()
+            }
+
+        assert set(rows) == {"Red Bull Racing", "McLaren", "Ferrari"}
+        assert rows["Red Bull Racing"]["wins"] == 1
+        assert rows["McLaren"]["podiums"] == 1
+        assert rows["Ferrari"]["dnf_rate"] == pytest.approx(1.0)
+        assert rows["Red Bull Racing"]["dnf_rate"] == pytest.approx(0.0)
+        assert rows["Ferrari"]["strategy_success"] is None
+        assert rows["Ferrari"]["development_index"] is None
+
+    def test_mart_race_summary_reflects_winner_pole_and_retirements(
+        self, raw_engine: Engine, gold_engine: Engine
+    ) -> None:
+        _seed_multi_driver_race(raw_engine)
+        run_transform(raw_engine, gold_engine, season=2024, pipeline_version=PIPELINE_VERSION)
+
+        table = _table(gold_engine, "mart_race_summary")
+        with gold_engine.connect() as connection:
+            row = connection.execute(select(table)).mappings().one()
+
+        assert row["winner"] == "Max Verstappen"
+        assert row["pole"] == "Lando Norris"
+        assert row["fastest_lap"] == "Max Verstappen"
+        assert row["retirements"] == 1
+        assert row["weather"] == "Dry"
+
+    def test_mart_dashboard_reflects_season_aggregates(
+        self, raw_engine: Engine, gold_engine: Engine
+    ) -> None:
+        _seed_multi_driver_race(raw_engine)
+        run_transform(raw_engine, gold_engine, season=2024, pipeline_version=PIPELINE_VERSION)
+
+        table = _table(gold_engine, "mart_dashboard")
+        with gold_engine.connect() as connection:
+            row = connection.execute(select(table)).mappings().one()
+
+        assert row["season"] == 2024
+        assert row["drivers"] == 3
+        assert row["constructors"] == 3
+        assert row["races"] == 1
+        assert row["fastest_lap_driver"] == "Max Verstappen"
+        assert row["average_overtakes"] == pytest.approx(2.0)
+        assert row["championship_gap"] == pytest.approx(7.0)  # 25 - 18
