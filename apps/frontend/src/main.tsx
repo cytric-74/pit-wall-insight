@@ -1,8 +1,10 @@
 import { TooltipProvider } from "@pit-wall-insight/ui";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router";
 
+import { queryClient } from "./lib/query-client.js";
 import { router } from "./routes/router.js";
 import "./styles/globals.css";
 import { PreferencesProvider, ThemeProvider } from "./themes/index.js";
@@ -14,12 +16,14 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <PreferencesProvider>
-      <ThemeProvider>
-        <TooltipProvider>
-          <RouterProvider router={router} />
-        </TooltipProvider>
-      </ThemeProvider>
-    </PreferencesProvider>
+    <QueryClientProvider client={queryClient}>
+      <PreferencesProvider>
+        <ThemeProvider>
+          <TooltipProvider>
+            <RouterProvider router={router} />
+          </TooltipProvider>
+        </ThemeProvider>
+      </PreferencesProvider>
+    </QueryClientProvider>
   </StrictMode>,
 );

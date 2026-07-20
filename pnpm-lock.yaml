@@ -41,9 +41,15 @@ importers:
 
   apps/frontend:
     dependencies:
+      '@pit-wall-insight/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
       '@pit-wall-insight/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@tanstack/react-query':
+        specifier: ^5.101.2
+        version: 5.101.2(react@19.2.7)
       lucide-react:
         specifier: ^1.25.0
         version: 1.25.0(react@19.2.7)
@@ -62,7 +68,10 @@ importers:
         version: link:../../packages/config
       '@tailwindcss/vite':
         specifier: ^4.3.3
-        version: 4.3.3(vite@8.1.5(jiti@2.7.0)(yaml@2.9.0))
+        version: 4.3.3(vite@8.1.5(@types/node@26.1.1)(jiti@2.7.0)(yaml@2.9.0))
+      '@types/node':
+        specifier: ^26.1.1
+        version: 26.1.1
       '@types/react':
         specifier: ^19.2.17
         version: 19.2.17
@@ -71,13 +80,13 @@ importers:
         version: 19.2.3(@types/react@19.2.17)
       '@vitejs/plugin-react':
         specifier: ^6.0.3
-        version: 6.0.3(vite@8.1.5(jiti@2.7.0)(yaml@2.9.0))
+        version: 6.0.3(vite@8.1.5(@types/node@26.1.1)(jiti@2.7.0)(yaml@2.9.0))
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
       vite:
         specifier: ^8.1.5
-        version: 8.1.5(jiti@2.7.0)(yaml@2.9.0)
+        version: 8.1.5(@types/node@26.1.1)(jiti@2.7.0)(yaml@2.9.0)
 
   packages/analytics:
     devDependencies:
@@ -819,6 +828,14 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
+  '@tanstack/query-core@5.101.2':
+    resolution: {integrity: sha512-hH5MLoJhF7KaIGd7q3xTXGXvslI+GYlM1Z/35aSHHWaCJWB7XvTSHYuV3eM7tw+aE0mT/xMro4M4Q9rCGHT0lw==}
+
+  '@tanstack/react-query@5.101.2':
+    resolution: {integrity: sha512-seDkr6kzGzX1okaaTtZPtgA688CDPlXUz1C6xSg0ESqn04Vuc8tlrYms1s3de+znBqhPVxFRfpAfUf+6XvfPWg==}
+    peerDependencies:
+      react: ^18 || ^19
+
   '@turbo/darwin-64@2.10.5':
     resolution: {integrity: sha512-ENvPwy3x5yS7MwNYHeWjqOBXkwIMp39Pd+/zXC6PoiNzF8EIvvLZOZZ+ny6L9x4WgS5vxUii2LM5gM+zjPdnWw==}
     cpu: [x64]
@@ -860,6 +877,9 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
+  '@types/node@26.1.1':
+    resolution: {integrity: sha512-nxAkRSVkN1Y0JC1W8ky/fTfkGsMmcrRsbx+3XoZE+rMOX71kLYTV7fLXpqud1GpbpP5TuffXFqfX7fH2GgZREw==}
 
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
@@ -1620,6 +1640,9 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  undici-types@8.3.0:
+    resolution: {integrity: sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ==}
+
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
@@ -2248,12 +2271,19 @@ snapshots:
       '@tailwindcss/oxide-win32-arm64-msvc': 4.3.3
       '@tailwindcss/oxide-win32-x64-msvc': 4.3.3
 
-  '@tailwindcss/vite@4.3.3(vite@8.1.5(jiti@2.7.0)(yaml@2.9.0))':
+  '@tailwindcss/vite@4.3.3(vite@8.1.5(@types/node@26.1.1)(jiti@2.7.0)(yaml@2.9.0))':
     dependencies:
       '@tailwindcss/node': 4.3.3
       '@tailwindcss/oxide': 4.3.3
       tailwindcss: 4.3.3
-      vite: 8.1.5(jiti@2.7.0)(yaml@2.9.0)
+      vite: 8.1.5(@types/node@26.1.1)(jiti@2.7.0)(yaml@2.9.0)
+
+  '@tanstack/query-core@5.101.2': {}
+
+  '@tanstack/react-query@5.101.2(react@19.2.7)':
+    dependencies:
+      '@tanstack/query-core': 5.101.2
+      react: 19.2.7
 
   '@turbo/darwin-64@2.10.5':
     optional: true
@@ -2283,6 +2313,10 @@ snapshots:
   '@types/estree@1.0.9': {}
 
   '@types/json-schema@7.0.15': {}
+
+  '@types/node@26.1.1':
+    dependencies:
+      undici-types: 8.3.0
 
   '@types/react-dom@19.2.3(@types/react@19.2.17)':
     dependencies:
@@ -2383,10 +2417,10 @@ snapshots:
       '@typescript-eslint/types': 8.64.0
       eslint-visitor-keys: 5.0.1
 
-  '@vitejs/plugin-react@6.0.3(vite@8.1.5(jiti@2.7.0)(yaml@2.9.0))':
+  '@vitejs/plugin-react@6.0.3(vite@8.1.5(@types/node@26.1.1)(jiti@2.7.0)(yaml@2.9.0))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
-      vite: 8.1.5(jiti@2.7.0)(yaml@2.9.0)
+      vite: 8.1.5(@types/node@26.1.1)(jiti@2.7.0)(yaml@2.9.0)
 
   acorn-jsx@5.3.2(acorn@8.17.0):
     dependencies:
@@ -2996,6 +3030,8 @@ snapshots:
 
   typescript@6.0.3: {}
 
+  undici-types@8.3.0: {}
+
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
@@ -3015,7 +3051,7 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.17
 
-  vite@8.1.5(jiti@2.7.0)(yaml@2.9.0):
+  vite@8.1.5(@types/node@26.1.1)(jiti@2.7.0)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.5
@@ -3023,6 +3059,7 @@ snapshots:
       rolldown: 1.1.5
       tinyglobby: 0.2.17
     optionalDependencies:
+      '@types/node': 26.1.1
       fsevents: 2.3.3
       jiti: 2.7.0
       yaml: 2.9.0

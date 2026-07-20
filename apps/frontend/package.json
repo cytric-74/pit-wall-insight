@@ -2,7 +2,7 @@
   "name": "@pit-wall-insight/frontend",
   "version": "0.0.0",
   "private": true,
-  "description": "React + TypeScript analytics client. Application shell only — no dashboard content yet.",
+  "description": "React + TypeScript analytics client, wired to the Pit Wall Insight API.",
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json && vite build",
@@ -12,7 +12,9 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
+    "@pit-wall-insight/shared-types": "workspace:*",
     "@pit-wall-insight/ui": "workspace:*",
+    "@tanstack/react-query": "^5.101.2",
     "lucide-react": "^1.25.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -21,6 +23,7 @@
   "devDependencies": {
     "@pit-wall-insight/config": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.1.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",

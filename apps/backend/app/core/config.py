@@ -49,6 +49,14 @@ class Settings(BaseSettings):
     api_version: str = "v1"
     project_name: str = "Pit Wall Insight"
 
+    # --- CORS (docs/05_BACKEND_ARCHITECTURE.md, middleware responsibilities) ---
+    # Vite's default dev port (5173) and preview port (4173) — the frontend
+    # (apps/frontend) has no proxy/rewrite configured, so it calls this API
+    # directly from the browser and needs an explicit CORS allowance.
+    # Comma-separated in the environment; production deployments override
+    # with the real deployed frontend origin(s).
+    cors_origins: str = "http://localhost:5173,http://localhost:4173"
+
     # --- Database (raw/bronze + analytics/gold, see docs/07_DATABASE_SCHEMA.md) ---
     database_url: str = "postgresql://pitwall:pitwall@localhost:5432/pit_wall_insight_raw"
     analytics_database_url: str = (
@@ -70,6 +78,11 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.environment == Environment.DEVELOPMENT
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     @computed_field  # type: ignore[prop-decorator]
     @property
