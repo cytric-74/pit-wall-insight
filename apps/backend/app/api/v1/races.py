@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import math
 import uuid
 
 from fastapi import APIRouter, Query, Request
 
 from app.dependencies.database import AnalyticsDbSession
-from app.schemas.common import CollectionResponse, Pagination, SuccessResponse
+from app.schemas.common import CollectionResponse, SuccessResponse
 from app.schemas.race import (
     DriverStrategy,
     PitstopEntry,
@@ -18,7 +17,7 @@ from app.schemas.race import (
     RaceWeather,
 )
 from app.services import race_service
-from app.utils.responses import build_meta
+from app.utils.responses import build_meta, build_pagination
 
 router = APIRouter(prefix="/races", tags=["Races"])
 
@@ -34,10 +33,7 @@ async def list_races(
     items, total = await race_service.list_races(
         db, season=season, country=country, page=page, limit=limit
     )
-    pages = math.ceil(total / limit) if limit else 0
-    return CollectionResponse(
-        data=items, pagination=Pagination(page=page, limit=limit, total=total, pages=pages)
-    )
+    return CollectionResponse(data=items, pagination=build_pagination(total, page, limit))
 
 
 @router.get("/{race_id}", response_model=SuccessResponse[RaceSummary], summary="Race summary")

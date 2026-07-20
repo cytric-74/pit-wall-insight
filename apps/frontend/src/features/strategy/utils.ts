@@ -1,5 +1,7 @@
 import type { TyreDegradationPoint } from "@pit-wall-insight/shared-types";
 
+import { alignSeriesByCategory } from "../../lib/chart-alignment.js";
+
 export interface DegradationSeries {
   compound: string;
   data: number[];
@@ -12,28 +14,19 @@ export interface DegradationChart {
 
 /** Groups `GET /strategy/tyres` points into one series per compound,
  * aligned to the tyre-life values every present compound has data for —
- * same intersection approach as `features/drivers/utils.ts::buildPaceSeries`,
- * since a chart's series must all share one `categories` axis and
- * compounds don't necessarily run for the same number of laps. */
+ * a chart's series must all share one `categories` axis and compounds
+ * don't necessarily run for the same number of laps. */
 export function buildDegradationSeries(points: readonly TyreDegradationPoint[]): DegradationChart {
-  const byCompound = new Map<string, Map<number, number>>();
-  for (const point of points) {
-    const values = byCompound.get(point.compound) ?? new Map<number, number>();
-    values.set(point.tyreLife, point.averageLapTime);
-    byCompound.set(point.compound, values);
-  }
-
-  const tyreLifeValues = [...new Set(points.map((point) => point.tyreLife))].sort((a, b) => a - b);
-  const categories = tyreLifeValues.filter((life) =>
-    [...byCompound.values()].every((values) => values.has(life)),
+  const aligned = alignSeriesByCategory(
+    points,
+    (point) => point.compound,
+    (point) => point.tyreLife,
+    (point) => point.averageLapTime,
   );
 
   return {
-    categories,
-    series: [...byCompound.entries()].map(([compound, values]) => ({
-      compound,
-      data: categories.map((life) => values.get(life)!),
-    })),
+    categories: aligned.categories,
+    series: aligned.series.map((series) => ({ compound: series.key, data: series.data })),
   };
 }
 

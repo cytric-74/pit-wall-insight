@@ -7,12 +7,13 @@ reimplementing it slightly differently.
 
 from __future__ import annotations
 
+import math
 import time
 from datetime import UTC, datetime
 
 from starlette.requests import Request
 
-from app.schemas.common import Meta
+from app.schemas.common import Meta, Pagination
 
 
 def build_meta(request: Request) -> Meta:
@@ -30,3 +31,15 @@ def build_meta(request: Request) -> Meta:
         execution_time=f"{elapsed_ms:.0f}ms",
         timestamp=datetime.now(UTC),
     )
+
+
+def build_pagination(total: int, page: int, limit: int) -> Pagination:
+    """Build the `Pagination` block for a collection response.
+
+    Five routers each copy-pasted this exact `math.ceil(total / limit) if
+    limit else 0` plus `Pagination(...)` construction (Phase 7 audit,
+    Medium). The `if limit else 0` guard was always dead code — every
+    router constrains `limit` with `Query(..., ge=1)`, so it can never be
+    falsy — and is dropped here rather than carried over.
+    """
+    return Pagination(page=page, limit=limit, total=total, pages=math.ceil(total / limit))

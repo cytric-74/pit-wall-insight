@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import math
-
 from fastapi import APIRouter, Query, Request
 
 from app.dependencies.database import AnalyticsDbSession
-from app.schemas.common import CollectionResponse, Pagination, SuccessResponse
+from app.schemas.common import CollectionResponse, SuccessResponse
 from app.schemas.season import CalendarEntry, SeasonListItem, SeasonSummary, StandingsData
 from app.services import season_service
-from app.utils.responses import build_meta
+from app.utils.responses import build_meta, build_pagination
 
 router = APIRouter(prefix="/seasons", tags=["Seasons"])
 
@@ -22,10 +20,7 @@ async def list_seasons(
     limit: int = Query(25, ge=1, le=100),
 ) -> CollectionResponse[SeasonListItem]:
     items, total = await season_service.list_seasons(db, page=page, limit=limit)
-    pages = math.ceil(total / limit) if limit else 0
-    return CollectionResponse(
-        data=items, pagination=Pagination(page=page, limit=limit, total=total, pages=pages)
-    )
+    return CollectionResponse(data=items, pagination=build_pagination(total, page, limit))
 
 
 @router.get("/{year}", response_model=SuccessResponse[SeasonSummary], summary="Season summary")

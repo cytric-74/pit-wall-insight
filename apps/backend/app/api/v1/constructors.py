@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import math
 import uuid
 
 from fastapi import APIRouter, Query, Request
 
 from app.dependencies.database import AnalyticsDbSession
-from app.schemas.common import CollectionResponse, Pagination, SuccessResponse
+from app.schemas.common import CollectionResponse, SuccessResponse
 from app.schemas.constructor import (
     Constructor,
     ConstructorCareerStatistics,
@@ -16,7 +15,7 @@ from app.schemas.constructor import (
 )
 from app.schemas.driver import Driver
 from app.services import constructor_service
-from app.utils.responses import build_meta
+from app.utils.responses import build_meta, build_pagination
 
 router = APIRouter(prefix="/constructors", tags=["Constructors"])
 
@@ -28,10 +27,7 @@ async def list_constructors(
     limit: int = Query(25, ge=1, le=100),
 ) -> CollectionResponse[Constructor]:
     items, total = await constructor_service.list_constructors(db, page=page, limit=limit)
-    pages = math.ceil(total / limit) if limit else 0
-    return CollectionResponse(
-        data=items, pagination=Pagination(page=page, limit=limit, total=total, pages=pages)
-    )
+    return CollectionResponse(data=items, pagination=build_pagination(total, page, limit))
 
 
 @router.get(

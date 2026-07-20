@@ -36,10 +36,16 @@ def create_app() -> FastAPI:
     # gateway layer before any public deployment; see docs/11_DEPLOYMENT.md
     # ("Security" -> "Rate Limiting") for the explicit requirement.
     app.add_middleware(RequestContextMiddleware)
+    # `allow_credentials` deliberately omitted (defaults to False) — nothing
+    # in this API uses cookies or credentialed requests, so enabling it
+    # would be unnecessary attack surface with no corresponding benefit
+    # (Phase 7 audit, Medium). `Settings.cors_origin_list` also rejects a
+    # bare `"*"` if credentials are ever turned back on (see that
+    # validator) — combining the two is spec-invalid and inconsistent
+    # across browsers.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
-        allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )

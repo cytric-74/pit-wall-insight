@@ -8,7 +8,6 @@ from collections import defaultdict
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions.base import NotFoundError
 from app.repositories import race_repository
 from app.schemas.race import (
     DriverStrategy,
@@ -19,11 +18,11 @@ from app.schemas.race import (
     RaceWeather,
     TyreStint,
 )
+from app.services.common import ensure_or_404, get_or_404
 
 
 async def _ensure_race_exists(session: AsyncSession, session_id: uuid.UUID) -> None:
-    if not await race_repository.race_exists(session, session_id):
-        raise NotFoundError(f"Race {session_id} not found.")
+    await ensure_or_404(race_repository.race_exists(session, session_id), f"Race {session_id} not found.")
 
 
 async def list_races(
@@ -49,9 +48,9 @@ async def list_races(
 
 
 async def get_race(session: AsyncSession, session_id: uuid.UUID) -> RaceSummary:
-    row = await race_repository.get_race_by_id(session, session_id)
-    if row is None:
-        raise NotFoundError(f"Race {session_id} not found.")
+    row = await get_or_404(
+        race_repository.get_race_by_id(session, session_id), f"Race {session_id} not found."
+    )
     return RaceSummary(
         id=row.session_id,
         season=row.season,

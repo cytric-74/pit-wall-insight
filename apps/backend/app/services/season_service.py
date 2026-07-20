@@ -15,7 +15,6 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions.base import NotFoundError
 from app.models import DimSeason
 from app.repositories import season_repository
 from app.schemas.season import (
@@ -26,13 +25,11 @@ from app.schemas.season import (
     SeasonSummary,
     StandingsData,
 )
+from app.services.common import get_or_404
 
 
 async def _get_season_or_404(session: AsyncSession, year: int) -> DimSeason:
-    season = await season_repository.get_season_by_year(session, year)
-    if season is None:
-        raise NotFoundError(f"Season {year} not found.")
-    return season
+    return await get_or_404(season_repository.get_season_by_year(session, year), f"Season {year} not found.")
 
 
 async def get_ranked_driver_standings(

@@ -99,6 +99,11 @@ class Settings(BaseSettings):
     analytics_database_url: str = (
         "postgresql://pitwall:pitwall@localhost:5432/pit_wall_insight_analytics"
     )
+    # Both defaults above (mirroring apps/backend's identical pattern) are
+    # dev-only, localhost-scoped credentials — never meant to reach a real
+    # deployment un-overridden. Every real deployment must set
+    # DATABASE_URL/ANALYTICS_DATABASE_URL via environment (Phase 7 audit,
+    # Medium).
 
     # --- Pipeline metadata (docs/06_DATA_ENGINEERING.md "Metadata") ---
     # Stamped onto every record this pipeline persists, so any row in the

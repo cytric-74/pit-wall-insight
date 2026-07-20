@@ -10,6 +10,8 @@ beyond which seasons have been ingested.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions.base import NotFoundError
@@ -21,6 +23,21 @@ from app.services.season_service import (
 )
 
 _RECENT_RACES_LIMIT = 5
+
+
+async def get_dashboard_last_modified(session: AsyncSession) -> datetime | None:
+    """When the current season's `dim_season` row was last touched by a
+    transform run — `None` if no season is loaded yet.
+
+    `get_dashboard` recomputes full standings via two grouped aggregate
+    queries on every single call, even though a completed season's
+    standings only change when a new (offline, batch) ingestion run
+    completes (Phase 7 audit, Medium). The router uses this to answer
+    conditional (`If-None-Match`/`If-Modified-Since`) requests with a bare
+    304 instead of recomputing and re-serializing the whole payload.
+    """
+    season = await season_repository.get_latest_season(session)
+    return season.updated_at if season is not None else None
 
 
 async def get_dashboard(session: AsyncSession) -> DashboardData:

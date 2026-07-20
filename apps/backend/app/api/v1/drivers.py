@@ -6,13 +6,12 @@ in this warehouse — see `app/models/gold/driver.py`).
 
 from __future__ import annotations
 
-import math
 import uuid
 
 from fastapi import APIRouter, Query, Request
 
 from app.dependencies.database import AnalyticsDbSession
-from app.schemas.common import CollectionResponse, Pagination, SuccessResponse
+from app.schemas.common import CollectionResponse, SuccessResponse
 from app.schemas.driver import (
     Driver,
     DriverCareerStatistics,
@@ -21,7 +20,7 @@ from app.schemas.driver import (
     DriverLap,
 )
 from app.services import driver_service
-from app.utils.responses import build_meta
+from app.utils.responses import build_meta, build_pagination
 
 router = APIRouter(prefix="/drivers", tags=["Drivers"])
 
@@ -47,10 +46,7 @@ async def list_drivers(
         page=page,
         limit=limit,
     )
-    pages = math.ceil(total / limit) if limit else 0
-    return CollectionResponse(
-        data=items, pagination=Pagination(page=page, limit=limit, total=total, pages=pages)
-    )
+    return CollectionResponse(data=items, pagination=build_pagination(total, page, limit))
 
 
 @router.get("/{driver_id}", response_model=SuccessResponse[Driver], summary="Driver profile")

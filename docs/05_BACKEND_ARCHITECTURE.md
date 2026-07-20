@@ -490,6 +490,11 @@ Forbidden
 
 Not Found
 
+An empty collection is not a 404 — every list endpoint returns `200` with
+`"data": []` for a genuinely empty result. `404` is reserved for a single
+resource that doesn't exist (e.g. an unknown `driver_id`), never for a
+filter/query that simply matched nothing.
+
 422
 
 Validation

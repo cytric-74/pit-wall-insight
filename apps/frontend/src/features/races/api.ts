@@ -7,19 +7,22 @@ import type {
   RaceWeather,
 } from "@pit-wall-insight/shared-types";
 
-import { apiGet, apiGetCollection, type QueryParamValue } from "../../lib/api-client.js";
+import type { QueryParamValue } from "../../lib/api-client.js";
+import { apiGet, apiGetCollection } from "../../lib/api-client.js";
 
 export interface ListRacesParams {
   season?: number;
   country?: string;
   page?: number;
   limit?: number;
-  [key: string]: QueryParamValue;
 }
 
 /** `GET /races` (docs/08_API_SPECIFICATION.md — "Races"). */
 export function listRaces(params?: ListRacesParams): Promise<{ data: RaceListItem[] }> {
-  return apiGetCollection<RaceListItem>("/races", params);
+  return apiGetCollection<RaceListItem>(
+    "/races",
+    params as Record<string, QueryParamValue> | undefined,
+  );
 }
 
 /** `GET /races/{id}`. */

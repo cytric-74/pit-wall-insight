@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import statistics
 import uuid
+from dataclasses import dataclass
+from typing import Any
 
+from sqlalchemy import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions.base import NotFoundError
 from app.models import DimConstructor, MartConstructorSummary
 from app.repositories import constructor_repository
 from app.schemas.compare import ConstructorComparison, ConstructorComparisonEntry
@@ -17,11 +18,7 @@ from app.schemas.constructor import (
     ConstructorSeasonSummary,
 )
 from app.schemas.driver import Driver
-
-
-def _mean(values: list[float | None]) -> float | None:
-    present = [value for value in values if value is not None]
-    return statistics.fmean(present) if present else None
+from app.services.common import get_or_404, mean, resolve_comparison_season
 
 
 def _constructor_from_model(model: DimConstructor) -> Constructor:
@@ -34,9 +31,10 @@ def _constructor_from_model(model: DimConstructor) -> Constructor:
 
 
 async def _get_constructor_or_404(session: AsyncSession, constructor_id: uuid.UUID) -> Constructor:
-    model = await constructor_repository.get_constructor_by_id(session, constructor_id)
-    if model is None:
-        raise NotFoundError(f"Constructor {constructor_id} not found.")
+    model = await get_or_404(
+        constructor_repository.get_constructor_by_id(session, constructor_id),
+        f"Constructor {constructor_id} not found.",
+    )
     return _constructor_from_model(model)
 
 
@@ -72,10 +70,24 @@ async def get_current_drivers(session: AsyncSession, constructor_id: uuid.UUID) 
     ]
 
 
-def _season_summary(row: object) -> ConstructorSeasonSummary:
-    summary = row.MartConstructorSummary  # type: ignore[attr-defined]
+@dataclass(frozen=True, slots=True)
+class _ConstructorSeasonRow:
+    """The shape `constructor_repository.list_season_summaries_for_constructor`
+    returns — `(season, MartConstructorSummary)`. Built once, here, from
+    the untyped `Row[Any]` the repository returns, rather than needing a
+    `# type: ignore[attr-defined]` at each of the two raw-row accesses
+    below (Phase 7 audit, Medium).
+    """
+
+    season: int
+    summary: MartConstructorSummary
+
+
+def _season_summary(row: Row[Any]) -> ConstructorSeasonSummary:
+    typed = _ConstructorSeasonRow(season=row.season, summary=row.MartConstructorSummary)
+    summary = typed.summary
     return ConstructorSeasonSummary(
-        season=row.season,  # type: ignore[attr-defined]
+        season=typed.season,
         wins=summary.wins,
         podiums=summary.podiums,
         pitstop_average=summary.pitstop_average,
@@ -111,8 +123,8 @@ async def get_career_statistics(
         seasons_competed=len(summaries),
         wins=sum(summary.wins for summary in summaries),
         podiums=sum(summary.podiums for summary in summaries),
-        average_points=_mean([summary.average_points for summary in summaries]),
-        dnf_rate=_mean([summary.dnf_rate for summary in summaries]),
+        average_points=mean([summary.average_points for summary in summaries]),
+        dnf_rate=mean([summary.dnf_rate for summary in summaries]),
     )
 
 
@@ -149,22 +161,13 @@ async def compare_constructors(
     summaries_a = {row.season: row.MartConstructorSummary for row in rows_a}
     summaries_b = {row.season: row.MartConstructorSummary for row in rows_b}
 
-    if season is not None:
-        resolved_season = season
-    else:
-        common_seasons = set(summaries_a) & set(summaries_b)
-        if not common_seasons:
-            raise NotFoundError(
-                f"No season with data for both "
-                f"{constructor_a.team_name} and {constructor_b.team_name}."
-            )
-        resolved_season = max(common_seasons)
-
-    if resolved_season not in summaries_a or resolved_season not in summaries_b:
-        raise NotFoundError(
-            f"Season {resolved_season} has no data for both "
-            f"{constructor_a.team_name} and {constructor_b.team_name}."
-        )
+    resolved_season = resolve_comparison_season(
+        summaries_a,
+        summaries_b,
+        season,
+        entity_a_name=constructor_a.team_name,
+        entity_b_name=constructor_b.team_name,
+    )
 
     return ConstructorComparison(
         season=resolved_season,

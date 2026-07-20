@@ -15,6 +15,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
+import collectors.ergast_client as ergast_client
 from collectors.ergast_client import (
     _extract_list,
     _get,
@@ -25,6 +26,16 @@ from collectors.ergast_client import (
     get_season_calendar,
 )
 from collectors.exceptions import SourceUnavailableError, UnexpectedResponseShapeError
+
+
+@pytest.fixture(autouse=True)
+def _reset_response_cache() -> None:
+    """Reset the module-level in-process response cache before every test
+    in this file — several tests call `_get("2024.json")` with different
+    mocked bodies, and without this the cache would leak the first test's
+    response into the next (Phase 7 audit, Medium: added alongside the
+    cache itself)."""
+    ergast_client._response_cache.clear()
 
 
 def _mock_settings() -> MagicMock:
@@ -67,6 +78,31 @@ class TestGet:
         assert kwargs["headers"] == {"User-Agent": "test-agent/1.0"}
         assert kwargs["timeout"] == 5.0
         assert kwargs["params"] == {"limit": 100, "offset": 0}
+
+    def test_repeating_an_identical_call_hits_the_cache_not_the_network(self) -> None:
+        response = MagicMock()
+        response.json.return_value = {"MRData": {"total": "0"}}
+        with (
+            patch("collectors.ergast_client.get_settings", return_value=_mock_settings()),
+            patch("collectors.ergast_client.requests.get", return_value=response) as mock_get,
+        ):
+            first = _get("2024/driverStandings.json", params={"limit": 100, "offset": 0})
+            second = _get("2024/driverStandings.json", params={"limit": 100, "offset": 0})
+
+        assert first == second
+        mock_get.assert_called_once()
+
+    def test_a_different_path_is_not_served_from_another_paths_cache_entry(self) -> None:
+        response = MagicMock()
+        response.json.return_value = {"MRData": {"total": "0"}}
+        with (
+            patch("collectors.ergast_client.get_settings", return_value=_mock_settings()),
+            patch("collectors.ergast_client.requests.get", return_value=response) as mock_get,
+        ):
+            _get("2024.json")
+            _get("2023.json")
+
+        assert mock_get.call_count == 2
 
 
 class TestExtractList:

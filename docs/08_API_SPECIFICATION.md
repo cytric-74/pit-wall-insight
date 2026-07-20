@@ -282,7 +282,10 @@ compound
 
 Returns
 
-Lap data.
+Lap data. Intentionally unbounded (single-resource envelope, no
+pagination) — bounded by the `season`/`race`/`session`/`compound` filters
+above and one driver's natural career scope, not a candidate for the
+collection/pagination envelope the rest of the API uses.
 
 ---
 
@@ -318,7 +321,9 @@ Consistency metrics.
 
 Returns
 
-Driver comparison.
+Driver comparison. Not canonical — an alias for `/compare/drivers`
+(identical `driver_service.compare_drivers` call underneath); prefer
+`/compare/drivers` in new client code, see "Comparison" below.
 
 ---
 
@@ -504,7 +509,10 @@ Race events.
 
 Returns
 
-Position changes.
+Position changes. Intentionally unbounded (single-resource envelope, no
+pagination) — bounded by one race's natural scope (one row per driver per
+lap for a single session), not a candidate for the collection/pagination
+envelope the rest of the API uses.
 
 ---
 
@@ -590,7 +598,10 @@ Session results.
 
 Returns
 
-Lap table.
+Lap table. Intentionally unbounded (single-resource envelope, no
+pagination) — bounded by one session's natural scope (every driver's every
+lap in that session, ~1200 rows at most), not a candidate for the
+collection/pagination envelope the rest of the API uses.
 
 ---
 
@@ -789,7 +800,10 @@ Circuit details.
 
 Returns
 
-Historical results.
+Historical results. Intentionally unbounded (single-resource envelope, no
+pagination) — bounded by one circuit's natural scope (every race ever run
+there), not a candidate for the collection/pagination envelope the rest of
+the API uses.
 
 ---
 
@@ -820,6 +834,10 @@ driverA
 
 driverB
 ```
+
+The canonical way to compare two drivers — `/drivers/{driverId}/comparison/{otherDriverId}`
+calls the identical `driver_service.compare_drivers` under the hood and is
+kept only for backward compatibility; prefer this one in new client code.
 
 ---
 

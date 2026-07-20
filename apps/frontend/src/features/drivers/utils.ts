@@ -1,6 +1,8 @@
 import type { DriverLap, RaceListItem, SessionResultEntry } from "@pit-wall-insight/shared-types";
 import type { UseQueryResult } from "@tanstack/react-query";
 
+import { alignSeriesByCategory } from "../../lib/chart-alignment.js";
+
 export interface RoundPosition {
   round: number;
   grid: number | null;
@@ -52,14 +54,40 @@ export function buildPaceSeries(
     };
   }
 
-  const teammateTimeByLap = new Map(
-    teammateLaps.filter((lap) => lap.lapTime != null).map((lap) => [lap.lapNumber, lap.lapTime!]),
+  const timedTeammateLaps = teammateLaps.filter((lap) => lap.lapTime != null);
+  if (sortedDriverLaps.length === 0 || timedTeammateLaps.length === 0) {
+    // Both groups must be non-empty for `alignSeriesByCategory`'s
+    // intersection to mean "laps both have a time for" — with only one
+    // (or neither) group present it would otherwise vacuously return that
+    // one group's own laps instead of the empty intersection this case
+    // actually is.
+    return { categories: [], driverData: [], teammateData: [] };
+  }
+
+  const aligned = alignSeriesByCategory(
+    [
+      ...sortedDriverLaps.map((lap) => ({
+        group: "driver",
+        lapNumber: lap.lapNumber,
+        lapTime: lap.lapTime!,
+      })),
+      ...timedTeammateLaps.map((lap) => ({
+        group: "teammate",
+        lapNumber: lap.lapNumber,
+        lapTime: lap.lapTime!,
+      })),
+    ],
+    (lap) => lap.group,
+    (lap) => lap.lapNumber,
+    (lap) => lap.lapTime,
   );
-  const shared = sortedDriverLaps.filter((lap) => teammateTimeByLap.has(lap.lapNumber));
+
+  const driverSeries = aligned.series.find((series) => series.key === "driver");
+  const teammateSeries = aligned.series.find((series) => series.key === "teammate");
 
   return {
-    categories: shared.map((lap) => lap.lapNumber),
-    driverData: shared.map((lap) => lap.lapTime!),
-    teammateData: shared.map((lap) => teammateTimeByLap.get(lap.lapNumber)!),
+    categories: aligned.categories,
+    driverData: driverSeries?.data ?? [],
+    teammateData: teammateSeries?.data ?? [],
   };
 }

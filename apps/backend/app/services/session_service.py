@@ -6,15 +6,15 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions.base import NotFoundError
 from app.repositories import session_repository
 from app.schemas.session import SessionLapEntry, SessionMetadata, SessionResultEntry
+from app.services.common import ensure_or_404, get_or_404
 
 
 async def get_session(session: AsyncSession, session_id: uuid.UUID) -> SessionMetadata:
-    row = await session_repository.get_session_by_id(session, session_id)
-    if row is None:
-        raise NotFoundError(f"Session {session_id} not found.")
+    row = await get_or_404(
+        session_repository.get_session_by_id(session, session_id), f"Session {session_id} not found."
+    )
     return SessionMetadata(
         id=row.session_id,
         season=row.season,
@@ -27,8 +27,9 @@ async def get_session(session: AsyncSession, session_id: uuid.UUID) -> SessionMe
 
 
 async def _ensure_session_exists(session: AsyncSession, session_id: uuid.UUID) -> None:
-    if not await session_repository.session_exists(session, session_id):
-        raise NotFoundError(f"Session {session_id} not found.")
+    await ensure_or_404(
+        session_repository.session_exists(session, session_id), f"Session {session_id} not found."
+    )
 
 
 async def get_results(session: AsyncSession, session_id: uuid.UUID) -> list[SessionResultEntry]:

@@ -33,6 +33,31 @@ async def test_dashboard_returns_success_envelope_with_camel_case_data(
     assert "executionTime" in body["meta"]
 
 
+async def test_dashboard_response_carries_an_etag_and_last_modified(
+    client: AsyncClient, analytics_session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    await seed_2024_two_race_season(analytics_session_factory)
+
+    response = await client.get("/api/v1/dashboard")
+
+    assert response.status_code == 200
+    assert response.headers["ETag"].startswith('W/"')
+    assert "Last-Modified" in response.headers
+
+
+async def test_dashboard_returns_304_when_if_none_match_matches_the_current_etag(
+    client: AsyncClient, analytics_session_factory: async_sessionmaker[AsyncSession]
+) -> None:
+    await seed_2024_two_race_season(analytics_session_factory)
+    first = await client.get("/api/v1/dashboard")
+    etag = first.headers["ETag"]
+
+    second = await client.get("/api/v1/dashboard", headers={"If-None-Match": etag})
+
+    assert second.status_code == 304
+    assert second.content == b""
+
+
 async def test_dashboard_returns_404_with_error_envelope_when_no_data_exists(
     client: AsyncClient,
 ) -> None:

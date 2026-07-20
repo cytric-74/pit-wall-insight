@@ -5,19 +5,22 @@ import type {
   Driver,
 } from "@pit-wall-insight/shared-types";
 
-import { apiGet, apiGetCollection, type QueryParamValue } from "../../lib/api-client.js";
+import type { QueryParamValue } from "../../lib/api-client.js";
+import { apiGet, apiGetCollection } from "../../lib/api-client.js";
 
 export interface ListConstructorsParams {
   page?: number;
   limit?: number;
-  [key: string]: QueryParamValue;
 }
 
 /** `GET /constructors` (docs/08_API_SPECIFICATION.md — "Constructors"). */
 export function listConstructors(
   params?: ListConstructorsParams,
 ): Promise<{ data: Constructor[] }> {
-  return apiGetCollection<Constructor>("/constructors", params);
+  return apiGetCollection<Constructor>(
+    "/constructors",
+    params as Record<string, QueryParamValue> | undefined,
+  );
 }
 
 /** `GET /constructors/{id}`. */

@@ -1,6 +1,7 @@
 import type { Driver, DriverCareerStatistics, DriverLap } from "@pit-wall-insight/shared-types";
 
-import { apiGet, apiGetCollection, type QueryParamValue } from "../../lib/api-client.js";
+import type { QueryParamValue } from "../../lib/api-client.js";
+import { apiGet, apiGetCollection } from "../../lib/api-client.js";
 
 export interface ListDriversParams {
   season?: number;
@@ -13,13 +14,15 @@ export interface ListDriversParams {
   sort?: string;
   page?: number;
   limit?: number;
-  [key: string]: QueryParamValue;
 }
 
 /** `GET /drivers` (docs/08_API_SPECIFICATION.md — "Drivers"). */
 export function listDrivers(params?: ListDriversParams): Promise<{ data: Driver[] }> {
   const { constructorId, ...rest } = params ?? {};
-  return apiGetCollection<Driver>("/drivers", { ...rest, constructor: constructorId });
+  return apiGetCollection<Driver>("/drivers", {
+    ...(rest as Record<string, QueryParamValue>),
+    constructor: constructorId,
+  });
 }
 
 /** `GET /drivers/{id}`. */
@@ -37,10 +40,12 @@ export interface DriverLapsParams {
   race?: number;
   session?: string;
   compound?: string;
-  [key: string]: QueryParamValue;
 }
 
 /** `GET /drivers/{id}/laps`. */
 export function getDriverLaps(driverId: string, params?: DriverLapsParams): Promise<DriverLap[]> {
-  return apiGet<DriverLap[]>(`/drivers/${driverId}/laps`, params);
+  return apiGet<DriverLap[]>(
+    `/drivers/${driverId}/laps`,
+    params as Record<string, QueryParamValue> | undefined,
+  );
 }

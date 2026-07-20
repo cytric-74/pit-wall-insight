@@ -63,9 +63,6 @@ class Settings(BaseSettings):
         "postgresql://pitwall:pitwall@localhost:5432/pit_wall_insight_analytics"
     )
 
-    # --- Security ---
-    secret_key: str = "change-me-in-production"
-
     # --- Logging ---
     log_level: str = "info"
 

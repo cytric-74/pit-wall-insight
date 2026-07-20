@@ -59,6 +59,18 @@ from config.settings import get_settings
 # always steps by this amount rather than trying to guess a larger one.
 _PAGE_SIZE = 100
 
+# In-process response cache, keyed by (path, sorted params) — unlike
+# `fastf1_client.py`'s on-disk cache (safe because a finished FastF1
+# session never changes), Jolpica's calendar/standings/results calls were
+# re-fetched from the network on every single call within a run, even for
+# a season that's long concluded and can never change again (Phase 7
+# audit, Medium). Scoped to one process's lifetime only, not persisted to
+# disk — a `collect` invocation that legitimately needs the current
+# season's still-changing standings gets a fresh process (and therefore a
+# fresh cache) every run, so this never serves stale in-progress-season
+# data across runs.
+_response_cache: dict[tuple[str, tuple[tuple[str, Any], ...]], dict[str, Any]] = {}
+
 
 def _get(path: str, *, params: dict[str, Any] | None = None) -> dict[str, Any]:
     """Issue a single GET request against the configured Jolpica base URL.
@@ -70,15 +82,24 @@ def _get(path: str, *, params: dict[str, Any] | None = None) -> dict[str, Any]:
     Outputs: the parsed JSON response body as a dict — still in Ergast's
     native `MRData`-wrapped shape; unwrapping happens in `_extract_list`,
     kept as a separate step so callers that need the envelope's metadata
-    (e.g. `total`, for pagination) can still get at it.
+    (e.g. `total`, for pagination) can still get at it. Repeating an
+    identical `(path, params)` call within the same process returns the
+    cached body rather than hitting the network again (see
+    `_response_cache` above).
 
     Edge cases: raises `SourceUnavailableError` for connection failures,
     timeouts, and non-2xx status codes — anything indicating the request
     itself failed, as opposed to succeeding with a body this module doesn't
     recognize (that's `UnexpectedResponseShapeError`, raised by
     `_extract_list` instead, since only the caller who knows the expected
-    shape can detect that).
+    shape can detect that). Only a successful response is cached — a
+    failed call is retried on its next call, not remembered as a failure.
     """
+    cache_key = (path, tuple(sorted((params or {}).items())))
+    cached = _response_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     settings = get_settings()
     url = f"{settings.jolpica_base_url.rstrip('/')}/{path.lstrip('/')}"
     headers = {"User-Agent": settings.user_agent}
@@ -92,6 +113,7 @@ def _get(path: str, *, params: dict[str, Any] | None = None) -> dict[str, Any]:
         raise SourceUnavailableError(f"Jolpica-F1 request failed: GET {url} ({exc})") from exc
 
     result: dict[str, Any] = response.json()
+    _response_cache[cache_key] = result
     return result
 
 

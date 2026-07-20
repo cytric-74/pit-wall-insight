@@ -4,17 +4,20 @@ import type {
   CircuitRecord,
 } from "@pit-wall-insight/shared-types";
 
-import { apiGet, apiGetCollection, type QueryParamValue } from "../../lib/api-client.js";
+import type { QueryParamValue } from "../../lib/api-client.js";
+import { apiGet, apiGetCollection } from "../../lib/api-client.js";
 
 export interface ListCircuitsParams {
   page?: number;
   limit?: number;
-  [key: string]: QueryParamValue;
 }
 
 /** `GET /circuits` (docs/08_API_SPECIFICATION.md — "Circuits"). */
 export function listCircuits(params?: ListCircuitsParams): Promise<{ data: Circuit[] }> {
-  return apiGetCollection<Circuit>("/circuits", params);
+  return apiGetCollection<Circuit>(
+    "/circuits",
+    params as Record<string, QueryParamValue> | undefined,
+  );
 }
 
 /** `GET /circuits/{id}`. */

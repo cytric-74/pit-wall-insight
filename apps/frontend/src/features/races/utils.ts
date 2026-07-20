@@ -1,5 +1,7 @@
 import type { DriverStrategy, PositionEntry } from "@pit-wall-insight/shared-types";
 
+import { alignSeriesByCategory } from "../../lib/chart-alignment.js";
+
 export interface DriverPositionSeries {
   driver: string;
   data: number[];
@@ -16,26 +18,19 @@ export interface PositionChart {
  * `categories` axis. Laps with a `null` position are dropped per driver
  * rather than coerced to a fabricated number. */
 export function buildPositionSeries(positions: readonly PositionEntry[]): PositionChart {
-  const lapNumbers = [...new Set(positions.map((entry) => entry.lapNumber))].sort((a, b) => a - b);
-
-  const byDriver = new Map<string, Map<number, number>>();
-  for (const entry of positions) {
-    if (entry.position === null) continue;
-    const driverLaps = byDriver.get(entry.driver) ?? new Map<number, number>();
-    driverLaps.set(entry.lapNumber, entry.position);
-    byDriver.set(entry.driver, driverLaps);
-  }
-
-  const categories = lapNumbers.filter((lap) =>
-    [...byDriver.values()].every((driverLaps) => driverLaps.has(lap)),
+  const withPosition = positions.filter(
+    (entry): entry is PositionEntry & { position: number } => entry.position !== null,
+  );
+  const aligned = alignSeriesByCategory(
+    withPosition,
+    (entry) => entry.driver,
+    (entry) => entry.lapNumber,
+    (entry) => entry.position,
   );
 
   return {
-    categories,
-    series: [...byDriver.entries()].map(([driver, driverLaps]) => ({
-      driver,
-      data: categories.map((lap) => driverLaps.get(lap)!),
-    })),
+    categories: aligned.categories,
+    series: aligned.series.map((series) => ({ driver: series.key, data: series.data })),
   };
 }
 

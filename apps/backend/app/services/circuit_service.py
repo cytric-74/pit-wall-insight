@@ -6,10 +6,10 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions.base import NotFoundError
 from app.models import DimCircuit
 from app.repositories import circuit_repository
 from app.schemas.circuit import Circuit, CircuitRaceHistoryEntry, CircuitRecord
+from app.services.common import get_or_404
 
 
 def _circuit_from_model(model: DimCircuit) -> Circuit:
@@ -24,9 +24,9 @@ def _circuit_from_model(model: DimCircuit) -> Circuit:
 
 
 async def _get_circuit_or_404(session: AsyncSession, circuit_id: uuid.UUID) -> Circuit:
-    model = await circuit_repository.get_circuit_by_id(session, circuit_id)
-    if model is None:
-        raise NotFoundError(f"Circuit {circuit_id} not found.")
+    model = await get_or_404(
+        circuit_repository.get_circuit_by_id(session, circuit_id), f"Circuit {circuit_id} not found."
+    )
     return _circuit_from_model(model)
 
 

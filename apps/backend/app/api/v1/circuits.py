@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import math
 import uuid
 
 from fastapi import APIRouter, Query, Request
 
 from app.dependencies.database import AnalyticsDbSession
 from app.schemas.circuit import Circuit, CircuitRaceHistoryEntry, CircuitRecord
-from app.schemas.common import CollectionResponse, Pagination, SuccessResponse
+from app.schemas.common import CollectionResponse, SuccessResponse
 from app.services import circuit_service
-from app.utils.responses import build_meta
+from app.utils.responses import build_meta, build_pagination
 
 router = APIRouter(prefix="/circuits", tags=["Circuits"])
 
@@ -23,10 +22,7 @@ async def list_circuits(
     limit: int = Query(25, ge=1, le=100),
 ) -> CollectionResponse[Circuit]:
     items, total = await circuit_service.list_circuits(db, page=page, limit=limit)
-    pages = math.ceil(total / limit) if limit else 0
-    return CollectionResponse(
-        data=items, pagination=Pagination(page=page, limit=limit, total=total, pages=pages)
-    )
+    return CollectionResponse(data=items, pagination=build_pagination(total, page, limit))
 
 
 @router.get("/{circuit_id}", response_model=SuccessResponse[Circuit], summary="Circuit details")
