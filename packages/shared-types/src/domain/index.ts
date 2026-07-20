@@ -13,4 +13,5 @@ export * from "./constructor.js";
 export * from "./dashboard.js";
 export * from "./driver.js";
 export * from "./race.js";
+export * from "./search.js";
 export * from "./session.js";
