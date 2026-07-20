@@ -11,13 +11,12 @@ import {
 import { useState } from "react";
 
 import { resolveConstructorId } from "../../lib/constructor-id.js";
+import { useCurrentSeasonRaces, useSessionResultsForRaces } from "../races/queries.js";
 import {
-  useCurrentSeasonRaces,
   useDriver,
   useDriverLaps,
   useDrivers,
   useDriverStatistics,
-  useSessionResultsForRaces,
   useTeammate,
 } from "./queries.js";
 import { buildPaceSeries, extractRoundPositions } from "./utils.js";

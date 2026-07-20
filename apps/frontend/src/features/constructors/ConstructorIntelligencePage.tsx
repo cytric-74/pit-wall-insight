@@ -1,6 +1,5 @@
 import {
   AreaChart,
-  Badge,
   BarChart,
   Container,
   Hero,
@@ -11,19 +10,24 @@ import {
   Widget,
   WidgetGrid,
 } from "@pit-wall-insight/ui";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { SAMPLE_ROUNDS } from "../../constants/season.js";
-import { getSampleConstructor, SAMPLE_CONSTRUCTORS } from "./data.js";
-
-const DEFAULT_CONSTRUCTOR_ID = SAMPLE_CONSTRUCTORS[0]!.id;
+import { resolveConstructorId } from "../../lib/constructor-id.js";
+import { useCurrentSeasonRaces, useSessionResultsForRaces } from "../races/queries.js";
+import {
+  useConstructor,
+  useConstructorDrivers,
+  useConstructorPerformance,
+  useConstructors,
+  useConstructorStatistics,
+} from "./queries.js";
+import { cumulativeSum, extractDriverPointsByRound, extractTeamPointsByRound } from "./utils.js";
 
 /**
  * Constructor Intelligence (docs/assets/04_LAYOUT_SYSTEM.md — layout
  * order: Constructor Overview -> Season Performance -> Reliability ->
- * Pit Strategy -> Development Trend -> Driver Comparison). Runs on the
- * sample data in ./data.ts — visibly badged as such — until the
- * constructor endpoints exist.
+ * Pit Strategy -> Development Trend -> Driver Comparison). Backed by
+ * `/api/v1/constructors/*` (docs/08_API_SPECIFICATION.md — "Constructors").
  *
  * The team selector here also drives the *global* constructor theme
  * (docs/01_PRODUCT_REQUIREMENTS.md Journey 2: "User selects Ferrari ->
@@ -31,19 +35,58 @@ const DEFAULT_CONSTRUCTOR_ID = SAMPLE_CONSTRUCTORS[0]!.id;
  * theme"). That's why the charts on this page pass no explicit colors:
  * they inherit the active theme, which this page keeps in sync with the
  * selected team. Selection is initialized *from* the active theme so
- * arriving with McLaren branding shows McLaren, not a hardcoded default.
+ * arriving with McLaren branding shows McLaren, not a hardcoded default —
+ * done in an effect (rather than a lazy `useState` initializer, like the
+ * old sample-data version used) since the real team list only exists once
+ * `useConstructors` has loaded.
  */
 export function ConstructorIntelligencePage() {
-  const { constructorId, setConstructor } = useConstructorTheme();
-  const [selectedId, setSelectedId] = useState<string>(() =>
-    constructorId && getSampleConstructor(constructorId) ? constructorId : DEFAULT_CONSTRUCTOR_ID,
-  );
-  const team = getSampleConstructor(selectedId) ?? SAMPLE_CONSTRUCTORS[0]!;
+  const { constructorId: activeThemeId, setConstructor } = useConstructorTheme();
+  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
+
+  const constructorsQuery = useConstructors({ limit: 100 });
+  const constructors = constructorsQuery.data?.data ?? [];
+
+  useEffect(() => {
+    if (selectedId !== undefined || constructors.length === 0) return;
+    const matching = constructors.find(
+      (item) => resolveConstructorId(item.teamName) === activeThemeId,
+    );
+    setSelectedId((matching ?? constructors[0])?.id);
+    // Deliberately keyed on `constructors.length` only (not `constructors`/
+    // `activeThemeId`) — this should run once, when the list first arrives,
+    // not on every subsequent render; re-running on `activeThemeId` would
+    // fight the user's own later selection.
+  }, [constructors.length]);
+
+  const constructorId = selectedId ?? constructors[0]?.id;
+  const constructorQuery = useConstructor(constructorId);
+  const team = constructorQuery.data;
+  const statisticsQuery = useConstructorStatistics(constructorId);
+  const statistics = statisticsQuery.data;
+  const performanceQuery = useConstructorPerformance(constructorId);
+  const performance = performanceQuery.data ?? [];
+  const driversQuery = useConstructorDrivers(constructorId);
+  const rosterDrivers = driversQuery.data ?? [];
+
+  const racesQuery = useCurrentSeasonRaces();
+  const races = racesQuery.data ?? [];
+  const resultsQueries = useSessionResultsForRaces(races);
+  const resultsLoading = resultsQueries.some((query) => query.isPending);
+
+  const driverNames = rosterDrivers.map((driver) => driver.fullName);
+  const teamPointsPerRound = extractTeamPointsByRound(races, resultsQueries, driverNames);
+  const cumulativePoints = cumulativeSum(teamPointsPerRound);
+  const driverPointsPerRound = extractDriverPointsByRound(races, resultsQueries, driverNames);
+
+  const pitStopRows = performance.filter((entry) => entry.pitstopAverage !== null);
 
   function handleSelect(id: string) {
     setSelectedId(id);
-    if (isConstructorId(id)) {
-      setConstructor(id);
+    const picked = constructors.find((item) => item.id === id);
+    const slug = resolveConstructorId(picked?.teamName);
+    if (isConstructorId(slug)) {
+      setConstructor(slug);
     }
   }
 
@@ -51,13 +94,17 @@ export function ConstructorIntelligencePage() {
     <>
       <Hero
         eyebrow="Constructor Intelligence"
-        title={team.name}
-        description={`${team.base} · ${team.powerUnit} power unit`}
+        title={team?.teamName ?? "Loading constructor…"}
+        {...(team?.baseCountry !== undefined && team?.baseCountry !== null
+          ? { description: team.baseCountry }
+          : {})}
         stats={[
-          { label: "Wins", value: String(team.stats.wins) },
-          { label: "Podiums", value: String(team.stats.podiums) },
-          { label: "Poles", value: String(team.stats.poles) },
-          { label: "Points", value: String(team.stats.points) },
+          { label: "Wins", value: statistics ? String(statistics.wins) : "—" },
+          { label: "Podiums", value: statistics ? String(statistics.podiums) : "—" },
+          {
+            label: "Avg. points",
+            value: statistics?.averagePoints != null ? statistics.averagePoints.toFixed(1) : "—",
+          },
         ]}
       />
 
@@ -65,72 +112,90 @@ export function ConstructorIntelligencePage() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <Select
             label="Constructor"
-            value={selectedId}
+            {...(constructorId !== undefined && { value: constructorId })}
             onValueChange={handleSelect}
-            options={SAMPLE_CONSTRUCTORS.map((item) => ({ value: item.id, label: item.name }))}
+            options={constructors.map((item) => ({ value: item.id, label: item.teamName }))}
             className="min-w-64"
           />
-          <Badge variant="warning">Sample data</Badge>
         </div>
 
         <WidgetGrid>
           <Widget
             title="Season performance"
             description="Championship points after each round."
+            loading={resultsLoading}
             className="sm:col-span-2 laptop:col-span-12"
           >
             <AreaChart
-              categories={SAMPLE_ROUNDS}
-              series={[{ name: team.name, data: team.cumulativePoints }]}
+              categories={races.map((race) => `R${race.round}`)}
+              series={[{ name: team?.teamName ?? "Team", data: cumulativePoints }]}
               yAxisLabel="Points"
               valueFormatter={(value) => `${value} pts`}
-              ariaLabel={`${team.name} championship points progression, sample data`}
+              ariaLabel={`${team?.teamName ?? "Constructor"} championship points progression`}
             />
           </Widget>
 
           <Widget
             title="Pit stop efficiency"
-            description="Average stationary time per round — lower is better."
+            description="Average stationary time per season — lower is better."
+            loading={performanceQuery.isPending}
             className="laptop:col-span-6"
           >
             <LineChart
-              categories={SAMPLE_ROUNDS}
-              series={[{ name: team.name, data: team.averagePitStops }]}
+              categories={pitStopRows.map((entry) => String(entry.season))}
+              series={[
+                {
+                  name: team?.teamName ?? "Team",
+                  data: pitStopRows.map((entry) => entry.pitstopAverage!),
+                },
+              ]}
               yAxisLabel="Seconds"
               valueFormatter={(value) => `${value.toFixed(1)}s`}
-              ariaLabel={`${team.name} average pit stop time per round, sample data`}
+              ariaLabel={`${team?.teamName ?? "Constructor"} average pit stop time per season`}
             />
           </Widget>
 
           <Widget
             title="Driver comparison"
             description="Points scored per round by each driver."
+            loading={resultsLoading || driversQuery.isPending}
             className="laptop:col-span-6"
           >
             <BarChart
-              categories={SAMPLE_ROUNDS}
-              series={team.drivers.map((driver) => ({
-                name: driver.abbreviation,
-                data: driver.pointsPerRound,
+              categories={races.map((race) => `R${race.round}`)}
+              series={driverPointsPerRound.map((entry) => ({
+                name: entry.driver,
+                data: entry.points,
               }))}
               yAxisLabel="Points"
               valueFormatter={(value) => `${value} pts`}
-              ariaLabel={`${team.name} driver points comparison, sample data`}
+              ariaLabel={`${team?.teamName ?? "Constructor"} driver points comparison`}
             />
           </Widget>
 
           <Widget
             title="Reliability"
-            description="Finishing record this season."
+            description="Season reliability record."
+            loading={statisticsQuery.isPending}
             className="laptop:col-span-6"
           >
             <dl className="flex flex-col gap-3">
               <ReliabilityRow
-                label="Classified finishes"
-                value={team.reliability.classifiedFinishes}
+                label="Seasons competed"
+                value={statistics ? String(statistics.seasonsCompeted) : "—"}
               />
-              <ReliabilityRow label="DNFs" value={String(team.reliability.dnfs)} />
-              <ReliabilityRow label="Laps completed" value={team.reliability.lapsCompletedPct} />
+              <ReliabilityRow
+                label="DNF rate"
+                value={
+                  statistics?.dnfRate != null ? `${(statistics.dnfRate * 100).toFixed(0)}%` : "—"
+                }
+              />
+              <ReliabilityRow
+                label="Avg. points per race"
+                value={
+                  statistics?.averagePoints != null ? statistics.averagePoints.toFixed(1) : "—"
+                }
+              />
             </dl>
           </Widget>
 

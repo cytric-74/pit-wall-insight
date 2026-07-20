@@ -7,6 +7,8 @@
  * — these are API contracts, not ORM mirrors.
  */
 
+export * from "./circuit.js";
+export * from "./constructor.js";
 export * from "./dashboard.js";
 export * from "./driver.js";
 export * from "./race.js";

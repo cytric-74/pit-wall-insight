@@ -1,13 +1,10 @@
-import type { RaceListItem } from "@pit-wall-insight/shared-types";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
+import { getConstructorDrivers } from "../constructors/api.js";
 import {
-  getConstructorDrivers,
-  getCurrentSeasonRaces,
   getDriver,
   getDriverLaps,
   getDriverStatistics,
-  getSessionResults,
   listDrivers,
   type DriverLapsParams,
   type ListDriversParams,
@@ -67,24 +64,4 @@ export function useTeammate(
   });
   const teammate = query.data?.find((driver) => driver.id !== excludeDriverId);
   return { ...query, teammate };
-}
-
-export function useCurrentSeasonRaces() {
-  return useQuery({
-    queryKey: ["races", "current-season"] as const,
-    queryFn: getCurrentSeasonRaces,
-  });
-}
-
-/** One `GET /sessions/{id}/results` query per race, in the same order as
- * `races` — shared (by query key) between whichever components need
- * per-round results for more than one driver, so the underlying fetch
- * only happens once per race regardless of how many drivers read it. */
-export function useSessionResultsForRaces(races: readonly RaceListItem[] | undefined) {
-  return useQueries({
-    queries: (races ?? []).map((race) => ({
-      queryKey: ["sessions", race.id, "results"] as const,
-      queryFn: () => getSessionResults(race.id),
-    })),
-  });
 }

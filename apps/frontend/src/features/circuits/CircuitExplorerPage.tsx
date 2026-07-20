@@ -1,20 +1,9 @@
-import {
-  AreaChart,
-  Badge,
-  Container,
-  Hero,
-  Select,
-  Widget,
-  WidgetGrid,
-} from "@pit-wall-insight/ui";
+import { Container, Hero, Select, Widget, WidgetGrid } from "@pit-wall-insight/ui";
 import { useState } from "react";
 
-import { getSampleCircuit, LAP_DISTANCE_MARKERS, SAMPLE_CIRCUITS } from "./data.js";
+import { useCircuit, useCircuitHistory, useCircuitRecords, useCircuits } from "./queries.js";
 import { TrackShape } from "./TrackShape.js";
-
-const DEFAULT_CIRCUIT_ID = SAMPLE_CIRCUITS[0]!.id;
-
-const SECTOR_LABELS = { 1: "Sector 1", 2: "Sector 2", 3: "Sector 3" } as const;
+import { pickTrackShape } from "./utils.js";
 
 /**
  * Circuit Explorer (docs/01_PRODUCT_REQUIREMENTS.md: interactive track
@@ -22,33 +11,47 @@ const SECTOR_LABELS = { 1: "Sector 1", 2: "Sector 2", 3: "Sector 3" } as const;
  * elevation profile, sector layout). There is no dedicated "Circuit
  * Explorer Layout" section in docs/assets/04_LAYOUT_SYSTEM.md — this
  * ordering is inferred from the product requirements and
- * docs/13_ROADMAP.md's Milestone 10 feature list instead. Runs on the
- * sample data in ./data.ts — visibly badged as such — until the circuit
- * endpoints exist.
+ * docs/13_ROADMAP.md's Milestone 10 feature list instead. Backed by
+ * `/api/v1/circuits/*` (docs/08_API_SPECIFICATION.md — "Circuits").
  *
- * The track map is an abstract placeholder outline (see TrackShape),
- * not a real `svg_track` trace, since no circuit geometry data exists
- * yet. Sector layout is folded into the corner list (each corner is
- * grouped under its sector) rather than given its own widget, since
- * track statistics already surface in the Hero stats.
+ * "Track map" stays an abstract placeholder outline (see TrackShape) —
+ * that was never sample data waiting to be replaced, it's a permanent
+ * design choice, since no real circuit geometry (`svg_track`) is
+ * collected anywhere in this pipeline. "Elevation profile" and "Corner
+ * information" have no data source at all (nothing in `dim_circuit`
+ * covers either) and stay permanent `loading` placeholders, the same
+ * pattern used for "Telemetry" on the Driver Dossier and "Strategy
+ * tendencies" on Constructor Intelligence.
  */
 export function CircuitExplorerPage() {
-  const [circuitId, setCircuitId] = useState<string>(DEFAULT_CIRCUIT_ID);
-  const circuit = getSampleCircuit(circuitId) ?? SAMPLE_CIRCUITS[0]!;
+  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
 
-  const cornersBySector = [1, 2, 3] as const;
+  const circuitsQuery = useCircuits({ limit: 100 });
+  const circuits = circuitsQuery.data?.data ?? [];
+  const circuitId = selectedId ?? circuits[0]?.id;
+
+  const circuitQuery = useCircuit(circuitId);
+  const circuit = circuitQuery.data;
+  const historyQuery = useCircuitHistory(circuitId);
+  const history = historyQuery.data ?? [];
+  const recordsQuery = useCircuitRecords(circuitId);
+  const record = recordsQuery.data;
 
   return (
     <>
       <Hero
         eyebrow="Circuit Explorer"
-        title={circuit.name}
-        description={`${circuit.city}, ${circuit.country} · ${circuit.direction}`}
+        title={circuit?.name ?? "Loading circuit…"}
+        description={[circuit?.city, circuit?.country]
+          .filter((part): part is string => Boolean(part))
+          .join(", ")}
         stats={[
-          { label: "Length", value: circuit.lengthKm.toFixed(3), unit: "km" },
-          { label: "Corners", value: String(circuit.corners) },
-          { label: "DRS zones", value: String(circuit.drsZones) },
-          { label: "Lap record", value: circuit.lapRecord },
+          { label: "Races hosted", value: historyQuery.isPending ? "—" : String(history.length) },
+          {
+            label: "Fastest lap",
+            value: record?.lapTime != null ? `${record.lapTime.toFixed(3)}s` : "—",
+          },
+          { label: "Fastest lap driver", value: record?.driver ?? "—" },
         ]}
       />
 
@@ -56,12 +59,11 @@ export function CircuitExplorerPage() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <Select
             label="Circuit"
-            value={circuitId}
-            onValueChange={setCircuitId}
-            options={SAMPLE_CIRCUITS.map((item) => ({ value: item.id, label: item.name }))}
+            {...(circuitId !== undefined && { value: circuitId })}
+            onValueChange={setSelectedId}
+            options={circuits.map((item) => ({ value: item.id, label: item.name }))}
             className="min-w-64"
           />
-          <Badge variant="warning">Sample data</Badge>
         </div>
 
         <WidgetGrid>
@@ -70,76 +72,43 @@ export function CircuitExplorerPage() {
             description="Abstract placeholder outline — not the real circuit geometry."
             className="laptop:col-span-6"
           >
-            <TrackShape shape={circuit.trackShape} />
+            {circuitId ? <TrackShape shape={pickTrackShape(circuitId)} /> : null}
           </Widget>
 
           <Widget
             title="Elevation profile"
             description="Relative elevation change around the lap."
+            loading
             className="laptop:col-span-6"
-          >
-            <AreaChart
-              categories={LAP_DISTANCE_MARKERS}
-              series={[{ name: "Elevation", data: circuit.elevationProfile }]}
-              xAxisLabel="Lap distance"
-              yAxisLabel="m"
-              valueFormatter={(value) => `${value}m`}
-              ariaLabel={`${circuit.name} elevation profile, sample data`}
-            />
-          </Widget>
+          />
 
           <Widget
             title="Corner information"
             description="Notable corners, grouped by sector."
+            loading
             className="laptop:col-span-6"
-          >
-            <div className="flex flex-col gap-4">
-              {cornersBySector.map((sector) => {
-                const corners = circuit.cornerInfo.filter((corner) => corner.sector === sector);
-                if (corners.length === 0) return null;
-                return (
-                  <div key={sector} className="flex flex-col gap-2">
-                    <span className="text-caption uppercase tracking-wide text-text-muted">
-                      {SECTOR_LABELS[sector]}
-                    </span>
-                    <ol className="flex flex-col gap-2">
-                      {corners.map((corner) => (
-                        <li
-                          key={corner.number}
-                          className="flex items-center gap-3 border-b border-border-subtle pb-2 last:border-b-0 last:pb-0"
-                        >
-                          <span className="font-mono text-caption tabular-nums text-text-muted">
-                            T{corner.number}
-                          </span>
-                          <span className="text-body-sm text-text-secondary">{corner.name}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                );
-              })}
-            </div>
-          </Widget>
+          />
 
           <Widget
             title="Historical winners"
             description="Most recent race winners at this circuit."
+            loading={historyQuery.isPending}
             className="laptop:col-span-6"
           >
             <ol className="flex flex-col gap-2">
-              {circuit.historicalWinners.map((winner) => (
+              {history.map((entry) => (
                 <li
-                  key={winner.season}
+                  key={`${entry.season}-${entry.round}`}
                   className="flex items-center justify-between border-b border-border-subtle pb-2 last:border-b-0 last:pb-0"
                 >
                   <span className="flex items-center gap-3">
                     <span className="font-mono text-caption tabular-nums text-text-muted">
-                      {winner.season}
+                      {entry.season}
                     </span>
-                    <span className="text-body-sm text-text-primary">{winner.driver}</span>
+                    <span className="text-body-sm text-text-primary">{entry.winner ?? "—"}</span>
                   </span>
                   <span className="text-caption uppercase tracking-wide text-text-muted">
-                    {winner.constructorName}
+                    {entry.raceName ?? "—"}
                   </span>
                 </li>
               ))}
