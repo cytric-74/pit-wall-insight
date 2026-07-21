@@ -40,6 +40,15 @@ export interface HeroProps {
    * deliberate gesture instead of a repeated mannerism.
    */
   titleVariant?: "display" | "statement";
+  /**
+   * A large, low-opacity graphic rendered behind the hero text instead of
+   * the default circuit illustration — e.g. a driver number becoming a
+   * background watermark (see the redesign brief: "allow driver numbers
+   * to become background graphics... allow typography to overlap
+   * imagery"). Replaces the side-column illustration entirely when set,
+   * rather than the two competing for the same space.
+   */
+  watermark?: ReactNode;
 }
 
 /**
@@ -67,6 +76,7 @@ export function Hero({
   actions,
   className,
   titleVariant = "display",
+  watermark,
 }: HeroProps) {
   const prefersReducedMotion = useReducedMotion();
   const initial = prefersReducedMotion ? "show" : "hidden";
@@ -76,7 +86,21 @@ export function Hero({
       <HeroAtmosphere reduced={Boolean(prefersReducedMotion)} />
 
       <Container className="relative py-(--hero-spacing)">
-        <div className="grid items-center gap-12 laptop:grid-cols-[minmax(0,1fr)_320px]">
+        {watermark ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 flex select-none items-center justify-end overflow-hidden opacity-[0.07]"
+          >
+            {watermark}
+          </div>
+        ) : null}
+
+        <div
+          className={cn(
+            "grid items-center gap-12",
+            !watermark && "laptop:grid-cols-[minmax(0,1fr)_320px]",
+          )}
+        >
           <motion.div
             initial={initial}
             animate="show"
@@ -145,19 +169,21 @@ export function Hero({
             ) : null}
           </motion.div>
 
-          <motion.div
-            initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{
-              duration: 0.6,
-              delay: prefersReducedMotion ? 0 : 0.35,
-              ease: EASE_STANDARD,
-            }}
-            className="hidden laptop:block"
-            aria-hidden="true"
-          >
-            <HeroCircuitGraphic reduced={Boolean(prefersReducedMotion)} />
-          </motion.div>
+          {!watermark ? (
+            <motion.div
+              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{
+                duration: 0.6,
+                delay: prefersReducedMotion ? 0 : 0.35,
+                ease: EASE_STANDARD,
+              }}
+              className="hidden laptop:block"
+              aria-hidden="true"
+            >
+              <HeroCircuitGraphic reduced={Boolean(prefersReducedMotion)} />
+            </motion.div>
+          ) : null}
         </div>
       </Container>
     </section>

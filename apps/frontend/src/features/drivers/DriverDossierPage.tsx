@@ -4,9 +4,8 @@ import {
   getConstructorTheme,
   Hero,
   LineChart,
+  Section,
   Select,
-  Widget,
-  WidgetGrid,
 } from "@pit-wall-insight/ui";
 import { useState } from "react";
 
@@ -29,9 +28,18 @@ const RACE_SESSION_TYPE = "R";
  * Driver Dossier (docs/assets/04_LAYOUT_SYSTEM.md — "Driver Dossier
  * Layout": Driver Overview -> Performance Summary -> Lap Analysis ->
  * Telemetry -> Race History -> Comparisons). Backed by `/api/v1/drivers/*`
- * (docs/08_API_SPECIFICATION.md — "Drivers"); "Telemetry" stays a
- * permanent `loading` placeholder — no telemetry data exists in this
- * pipeline (see docs/06_DATA_ENGINEERING.md scope).
+ * (docs/08_API_SPECIFICATION.md — "Drivers").
+ *
+ * Editorial rebuild: the driver's number becomes a giant, low-opacity
+ * watermark behind the Hero text instead of the generic circuit graphic
+ * (see the redesign brief — "driver numbers become background graphics").
+ * "Race pace" is the one primary analytical focus (full width, the actual
+ * lap-analysis question this page exists to answer); qualifying-vs-race
+ * and position progression are demoted into a single secondary "Season
+ * form" section. "Telemetry" is no longer a permanent fake-loading
+ * skeleton (there is no telemetry data source for this page — an
+ * indefinite skeleton misrepresented that as "still loading"); it's a
+ * plain pointer to Telemetry Center instead.
  *
  * Charts are colored with the *selected driver's* constructor colors
  * (explicit per-series override) rather than the global constructor
@@ -108,63 +116,59 @@ export function DriverDossierPage() {
           { label: "Poles", value: statistics ? String(statistics.poles) : "—" },
           { label: "Fastest laps", value: statistics ? String(statistics.fastestLaps) : "—" },
         ]}
+        watermark={
+          <DriverNumberMark
+            {...(driver?.driverNumber != null && { number: driver.driverNumber })}
+          />
+        }
       />
 
-      <Container className="flex flex-col gap-8 pb-(--section-gap)">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <Select
-            label="Driver"
-            {...(driverId !== undefined && { value: driverId })}
-            onValueChange={setSelectedDriverId}
-            options={drivers.map((item) => ({
-              value: item.id,
-              label: item.abbreviation ? `${item.abbreviation} — ${item.fullName}` : item.fullName,
-            }))}
-            className="min-w-64"
+      <Container className="flex flex-wrap items-end justify-between gap-4 py-8">
+        <Select
+          label="Driver"
+          {...(driverId !== undefined && { value: driverId })}
+          onValueChange={setSelectedDriverId}
+          options={drivers.map((item) => ({
+            value: item.id,
+            label: item.abbreviation ? `${item.abbreviation} — ${item.fullName}` : item.fullName,
+          }))}
+          className="min-w-64"
+        />
+      </Container>
+
+      <Section
+        title="Race pace"
+        description={
+          teammate
+            ? `Stint lap times vs. ${teammate.fullName} — lower is faster.`
+            : "Stint lap times — lower is faster."
+        }
+      >
+        {driverLapsQuery.isError || teammateLapsQuery.isError ? (
+          <QueryError />
+        ) : (
+          <LineChart
+            categories={pace.categories}
+            series={[
+              { name: driver?.abbreviation ?? "Driver", data: pace.driverData, ...primaryColor },
+              ...(pace.teammateData && teammate
+                ? [{ name: teammate.fullName, data: pace.teammateData, ...secondaryColor }]
+                : []),
+            ]}
+            yAxisLabel="Lap time (s)"
+            valueFormatter={(value) => `${value.toFixed(1)}s`}
+            ariaLabel={`${driver?.fullName ?? "Driver"} race pace compared with teammate`}
+            height={400}
           />
-        </div>
+        )}
+      </Section>
 
-        <WidgetGrid>
-          <Widget
-            title="Race pace"
-            description={
-              teammate
-                ? `Stint lap times vs. ${teammate.fullName} — lower is faster.`
-                : "Stint lap times — lower is faster."
-            }
-            loading={
-              driverLapsQuery.isPending || (teammate !== undefined && teammateLapsQuery.isPending)
-            }
-            className="sm:col-span-2 laptop:col-span-12"
-          >
-            {driverLapsQuery.isError || teammateLapsQuery.isError ? (
-              <QueryError />
-            ) : (
-              <LineChart
-                categories={pace.categories}
-                series={[
-                  {
-                    name: driver?.abbreviation ?? "Driver",
-                    data: pace.driverData,
-                    ...primaryColor,
-                  },
-                  ...(pace.teammateData && teammate
-                    ? [{ name: teammate.fullName, data: pace.teammateData, ...secondaryColor }]
-                    : []),
-                ]}
-                yAxisLabel="Lap time (s)"
-                valueFormatter={(value) => `${value.toFixed(1)}s`}
-                ariaLabel={`${driver?.fullName ?? "Driver"} race pace compared with teammate`}
-              />
-            )}
-          </Widget>
-
-          <Widget
-            title="Qualifying vs. race"
-            description="Grid position against finishing position by round — lower is better."
-            loading={resultsLoading}
-            className="laptop:col-span-6"
-          >
+      <Section title="Season form" description="Qualifying pace and finishing position by round.">
+        <div className="grid grid-cols-1 gap-x-16 gap-y-10 laptop:grid-cols-2">
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Qualifying vs. race
+            </h3>
             {resultsError ? (
               <QueryError />
             ) : (
@@ -187,14 +191,12 @@ export function DriverDossierPage() {
                 ariaLabel={`${driver?.fullName ?? "Driver"} qualifying versus race positions`}
               />
             )}
-          </Widget>
+          </div>
 
-          <Widget
-            title="Position progression"
-            description="Finishing position across the season — lower is better."
-            loading={resultsLoading}
-            className="laptop:col-span-6"
-          >
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Position progression
+            </h3>
             {resultsError ? (
               <QueryError />
             ) : (
@@ -213,18 +215,43 @@ export function DriverDossierPage() {
                 ariaLabel={`${driver?.fullName ?? "Driver"} finishing position progression`}
               />
             )}
-          </Widget>
+          </div>
+        </div>
 
-          <Widget
-            title="Telemetry"
-            description="Speed, throttle, and brake traces"
+        {resultsLoading ? (
+          <p className="mt-6 font-mono text-caption uppercase tracking-wide text-text-muted">
+            Syncing telemetry…
+          </p>
+        ) : null}
+
+        <p className="mt-10 font-mono text-caption uppercase tracking-wide text-text-muted">
+          Speed, throttle, and brake traces —{" "}
+          <a
             href="/telemetry"
-            linkLabel="Telemetry Center"
-            loading
-            className="sm:col-span-2 laptop:col-span-12"
-          />
-        </WidgetGrid>
-      </Container>
+            className="text-constructor-primary transition-colors duration-(--duration-fast) ease-standard hover:text-accent-hover"
+          >
+            Telemetry Center
+          </a>
+        </p>
+      </Section>
     </>
+  );
+}
+
+/**
+ * The driver's number as a giant, near-invisible background numeral
+ * (docs' driver-dossier equivalent of Mission Control's circuit graphic) —
+ * a placeholder for real driver photography/silhouettes once those assets
+ * exist, per the redesign brief's media pipeline.
+ */
+function DriverNumberMark({ number }: { number?: number }) {
+  if (number == null) return null;
+  return (
+    <span
+      className="font-dotmatrix leading-none text-constructor-primary tabular-nums"
+      style={{ fontSize: "min(32vw, 22rem)" }}
+    >
+      {number}
+    </span>
   );
 }
