@@ -618,7 +618,14 @@ Future
 
 Security Headers
 
-Enabled
+Not yet configured anywhere — no `vercel.json`/`netlify.toml`/`_headers`
+exists for the deployed frontend SPA, and the backend sets no
+`Content-Security-Policy`/`X-Content-Type-Options`/`X-Frame-Options`
+middleware either (Phase 7 audit, Low). A baseline CSP for the SPA (e.g.
+`default-src 'self'; connect-src 'self' <API origin>; img-src 'self' data:;
+style-src 'self' 'unsafe-inline'`, tightened once the exact asset/font
+origins are known) should be added via whichever hosting platform's native
+headers mechanism once one is chosen.
 
 SQL Injection
 

@@ -92,7 +92,7 @@ class CollectArgs:
 
     season: int
     round: int | None
-    session: str
+    session_type: str
     entities: list[str]
     dry_run: bool
     database_url: str | None
@@ -148,19 +148,19 @@ def _collect_fastf1_schedule(args: CollectArgs) -> CollectedBatch:
 
 def _collect_fastf1_results(args: CollectArgs) -> CollectedBatch:
     round_number = _require_round(args, "fastf1-results")
-    records = get_session_results(args.season, round_number, args.session)
+    records = get_session_results(args.season, round_number, args.session_type)
     return CollectedBatch("fastf1", RawSessionResult, records, "DriverNumber")
 
 
 def _collect_fastf1_laps(args: CollectArgs) -> CollectedBatch:
     round_number = _require_round(args, "fastf1-laps")
-    records = get_session_laps(args.season, round_number, args.session)
+    records = get_session_laps(args.season, round_number, args.session_type)
     return CollectedBatch("fastf1", RawSessionLap, records, "Driver")
 
 
 def _collect_fastf1_weather(args: CollectArgs) -> CollectedBatch:
     round_number = _require_round(args, "fastf1-weather")
-    records = get_session_weather(args.season, round_number, args.session)
+    records = get_session_weather(args.season, round_number, args.session_type)
     return CollectedBatch("fastf1", RawWeatherSample, records, "Time")
 
 
@@ -228,7 +228,7 @@ def _load_fastf1_results(
         cast(list[RawSessionResult], records),
         season=args.season,
         round_number=round_number,
-        session_type=args.session,
+        session_type=args.session_type,
         pipeline_version=pipeline_version,
     )
 
@@ -242,7 +242,7 @@ def _load_fastf1_laps(
         cast(list[RawSessionLap], records),
         season=args.season,
         round_number=round_number,
-        session_type=args.session,
+        session_type=args.session_type,
         pipeline_version=pipeline_version,
     )
 
@@ -256,7 +256,7 @@ def _load_fastf1_weather(
         cast(list[RawWeatherSample], records),
         season=args.season,
         round_number=round_number,
-        session_type=args.session,
+        session_type=args.session_type,
         pipeline_version=pipeline_version,
     )
 
@@ -346,9 +346,9 @@ def _add_collect_parser(subparsers: argparse._SubParsersAction) -> None:  # type
         "(fastf1-results, fastf1-laps, fastf1-weather, jolpica-race-results).",
     )
     parser.add_argument(
-        "--session",
+        "--session-type",
         default="R",
-        help="FastF1 session identifier for fastf1-results/-laps/-weather "
+        help="FastF1 session type for fastf1-results/-laps/-weather "
         "(FP1/FP2/FP3/Q/S/SQ/R). Defaults to 'R' (Race).",
     )
     parser.add_argument(
@@ -415,7 +415,7 @@ def parse_args(argv: Sequence[str] | None = None) -> CollectArgs | TransformArgs
         return CollectArgs(
             season=parsed.season,
             round=parsed.round,
-            session=parsed.session,
+            session_type=parsed.session_type,
             entities=entities,
             dry_run=parsed.dry_run,
             database_url=parsed.database_url,

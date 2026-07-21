@@ -4,6 +4,9 @@
   "private": true,
   "description": "React + TypeScript analytics client, wired to the Pit Wall Insight API.",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json && vite build",
     "dev": "vite",

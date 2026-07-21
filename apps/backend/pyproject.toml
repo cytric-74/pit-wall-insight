@@ -4,6 +4,10 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+# E501 (line-too-long) is ignored — this project doesn't hard-wrap
+# prose-heavy docstrings/comments at 100 chars — but `line-length` itself
+# is still live: it's the threshold `I` (isort) uses to decide whether to
+# wrap a multi-import `from x import (...)` block onto multiple lines.
 ignore = ["E501"]
 
 [tool.ruff.lint.isort]

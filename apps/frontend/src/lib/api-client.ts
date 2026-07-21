@@ -1,5 +1,6 @@
 import type {
   ApiCollectionResponse,
+  ApiErrorResponse,
   ApiResponse,
   PaginationMeta,
 } from "@pit-wall-insight/shared-types";
@@ -41,15 +42,20 @@ function buildUrl(path: string, params?: Record<string, QueryParamValue>): strin
   return url.toString();
 }
 
-export async function apiGet<T>(
+/** Shared by `apiGet`/`apiGetCollection` — both previously repeated this
+ * exact fetch -> JSON-parse-with-catch -> `success` check -> throw
+ * `ApiError` sequence, differing only in the envelope shape and return
+ * value (Phase 7 audit, Low). `S` is whichever `success: true` envelope
+ * shape the caller expects back. */
+async function request<S extends { success: true }>(
   path: string,
-  params?: Record<string, QueryParamValue>,
-): Promise<T> {
+  params: Record<string, QueryParamValue> | undefined,
+): Promise<S> {
   const response = await fetch(buildUrl(path, params));
 
-  let body: ApiResponse<T>;
+  let body: S | ApiErrorResponse;
   try {
-    body = (await response.json()) as ApiResponse<T>;
+    body = (await response.json()) as S | ApiErrorResponse;
   } catch {
     throw new ApiError(
       `Request to ${path} failed with status ${response.status} and no JSON body.`,
@@ -61,6 +67,14 @@ export async function apiGet<T>(
   if (!body.success) {
     throw new ApiError(body.error.message, body.error.code, response.status);
   }
+  return body;
+}
+
+export async function apiGet<T>(
+  path: string,
+  params?: Record<string, QueryParamValue>,
+): Promise<T> {
+  const body = await request<Extract<ApiResponse<T>, { success: true }>>(path, params);
   return body.data;
 }
 
@@ -76,21 +90,6 @@ export async function apiGetCollection<T>(
   path: string,
   params?: Record<string, QueryParamValue>,
 ): Promise<Collection<T>> {
-  const response = await fetch(buildUrl(path, params));
-
-  let body: ApiCollectionResponse<T> | { success: false; error: { code: string; message: string } };
-  try {
-    body = (await response.json()) as typeof body;
-  } catch {
-    throw new ApiError(
-      `Request to ${path} failed with status ${response.status} and no JSON body.`,
-      "INVALID_RESPONSE",
-      response.status,
-    );
-  }
-
-  if (!body.success) {
-    throw new ApiError(body.error.message, body.error.code, response.status);
-  }
+  const body = await request<ApiCollectionResponse<T>>(path, params);
   return { data: body.data, pagination: body.pagination };
 }

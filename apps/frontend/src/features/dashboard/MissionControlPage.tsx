@@ -1,16 +1,22 @@
 import type { ConstructorStandingEntry, DriverStandingEntry } from "@pit-wall-insight/shared-types";
 import { Dashboard, Features, Hero, Statistics, Widget, WidgetGrid } from "@pit-wall-insight/ui";
 
-import { FEATURES } from "../constants/features.js";
-import { STATISTICS } from "../constants/statistics.js";
-import { useDashboard, useDashboardHighlights } from "../features/dashboard/queries.js";
-import { EmptyState } from "../lib/empty-state.js";
-import { QueryError } from "../lib/query-error.js";
+import { FEATURES } from "../../constants/features.js";
+import { STATISTICS } from "../../constants/statistics.js";
+import { EmptyState } from "../../lib/empty-state.js";
+import { QueryError } from "../../lib/query-error.js";
+import { useDashboard, useDashboardHighlights } from "./queries.js";
 
 /**
  * The Hero/Features/Statistics sections stay static marketing copy; the
  * `Dashboard` section is backed by `GET /dashboard` and
  * `GET /dashboard/highlights` (docs/08_API_SPECIFICATION.md — "Dashboard").
+ *
+ * Lives in `features/dashboard/` like every other routed page
+ * (`features/<name>/<Name>Page.tsx`) — the component is still named
+ * `MissionControlPage` to match the product's own branding for this page
+ * (see the Hero's `eyebrow`/`title` below), not the underlying feature
+ * folder name.
  */
 export function MissionControlPage() {
   const dashboardQuery = useDashboard();

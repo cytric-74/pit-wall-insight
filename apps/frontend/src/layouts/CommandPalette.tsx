@@ -12,6 +12,11 @@ export interface CommandPaletteProps {
  * (docs/10_ANIMATION_AND_INTERACTIONS.md — "Command Palette": background
  * fade -> palette -> cursor focus) via the shared Dialog primitive, but
  * has no command registry or search behavior wired up yet.
+ *
+ * The search input is disabled rather than live — an enabled text field
+ * that visibly accepts typing but silently does nothing on every
+ * keystroke reads as broken, not unfinished (Phase 7 audit, Low/Bug).
+ * Re-enable once it's actually wired to the Search API.
  */
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   return (
@@ -25,10 +30,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <Search className="size-4 shrink-0 text-text-muted" aria-hidden="true" />
           <input
             type="text"
-            autoFocus
+            disabled
             aria-label="Command palette search"
-            placeholder="Type a command or search…"
-            className="h-14 w-full bg-transparent font-mono text-body-sm text-text-primary placeholder:text-text-disabled focus:outline-none"
+            placeholder="Command search isn't available yet"
+            className="h-14 w-full bg-transparent font-mono text-body-sm text-text-primary placeholder:text-text-disabled focus:outline-none disabled:cursor-not-allowed"
           />
         </div>
         <p className="p-6 text-center text-body-sm text-text-muted">No commands available yet.</p>

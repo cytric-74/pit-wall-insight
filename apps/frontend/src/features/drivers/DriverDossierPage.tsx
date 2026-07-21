@@ -21,7 +21,7 @@ import {
   useDriverStatistics,
   useTeammate,
 } from "./queries.js";
-import { buildPaceSeries, extractRoundPositions } from "./utils.js";
+import { buildPaceSeries, extractRoundPositions, hasFinish, hasGridAndFinish } from "./utils.js";
 
 const RACE_SESSION_TYPE = "R";
 
@@ -85,8 +85,8 @@ export function DriverDossierPage() {
   );
 
   const positions = driver ? extractRoundPositions(races, resultsQueries, driver.fullName) : [];
-  const qualifyingVsRaceRows = positions.filter((row) => row.grid !== null && row.finish !== null);
-  const progressionRows = positions.filter((row) => row.finish !== null);
+  const qualifyingVsRaceRows = positions.filter(hasGridAndFinish);
+  const progressionRows = positions.filter(hasFinish);
 
   return (
     <>
@@ -173,12 +173,12 @@ export function DriverDossierPage() {
                 series={[
                   {
                     name: "Qualifying",
-                    data: qualifyingVsRaceRows.map((row) => row.grid!),
+                    data: qualifyingVsRaceRows.map((row) => row.grid),
                     ...secondaryColor,
                   },
                   {
                     name: "Race",
-                    data: qualifyingVsRaceRows.map((row) => row.finish!),
+                    data: qualifyingVsRaceRows.map((row) => row.finish),
                     ...primaryColor,
                   },
                 ]}
@@ -203,7 +203,7 @@ export function DriverDossierPage() {
                 series={[
                   {
                     name: driver?.abbreviation ?? "Driver",
-                    data: progressionRows.map((row) => row.finish!),
+                    data: progressionRows.map((row) => row.finish),
                     ...primaryColor,
                   },
                 ]}

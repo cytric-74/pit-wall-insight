@@ -51,6 +51,11 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
 async def validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
+    # `exc.errors()` includes Pydantic's raw "input" value for each failed
+    # field verbatim. Not currently exploitable — every endpoint today is a
+    # GET with no sensitive request body — but reconsider this (e.g. redact
+    # `details` for body/form fields) before the first POST/PUT endpoint
+    # that could receive sensitive input is added (Phase 7 audit, Low).
     content = _envelope(
         "VALIDATION_ERROR",
         "Request validation failed.",

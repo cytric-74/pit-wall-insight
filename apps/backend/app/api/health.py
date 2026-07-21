@@ -12,7 +12,7 @@ from sqlalchemy import text
 
 from app.dependencies.config import SettingsDep
 from app.dependencies.database import AnalyticsDbSession
-from app.exceptions.base import AppException
+from app.exceptions.base import NotReadyError
 from app.schemas.health import HealthResponse, LivenessResponse, ReadinessResponse
 
 router = APIRouter(tags=["Health"])
@@ -28,9 +28,7 @@ async def get_ready(db: AnalyticsDbSession) -> ReadinessResponse:
     try:
         await db.execute(text("SELECT 1"))
     except Exception as exc:
-        raise AppException(
-            "Analytics database is not reachable.", code="NOT_READY", status_code=503
-        ) from exc
+        raise NotReadyError("Analytics database is not reachable.") from exc
     return ReadinessResponse()
 
 

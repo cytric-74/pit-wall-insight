@@ -23,7 +23,12 @@ import {
   useConstructors,
   useConstructorStatistics,
 } from "./queries.js";
-import { cumulativeSum, extractDriverPointsByRound, extractTeamPointsByRound } from "./utils.js";
+import {
+  cumulativeSum,
+  extractDriverPointsByRound,
+  extractTeamPointsByRound,
+  hasPitstopAverage,
+} from "./utils.js";
 
 /**
  * Constructor Intelligence (docs/assets/04_LAYOUT_SYSTEM.md — layout
@@ -82,7 +87,7 @@ export function ConstructorIntelligencePage() {
   const cumulativePoints = cumulativeSum(teamPointsPerRound);
   const driverPointsPerRound = extractDriverPointsByRound(races, resultsQueries, driverNames);
 
-  const pitStopRows = performance.filter((entry) => entry.pitstopAverage !== null);
+  const pitStopRows = performance.filter(hasPitstopAverage);
 
   function handleSelect(id: string) {
     setSelectedId(id);
@@ -160,7 +165,7 @@ export function ConstructorIntelligencePage() {
                 series={[
                   {
                     name: team?.teamName ?? "Team",
-                    data: pitStopRows.map((entry) => entry.pitstopAverage!),
+                    data: pitStopRows.map((entry) => entry.pitstopAverage),
                   },
                 ]}
                 yAxisLabel="Seconds"

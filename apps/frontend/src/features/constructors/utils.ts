@@ -1,5 +1,23 @@
-import type { RaceListItem, SessionResultEntry } from "@pit-wall-insight/shared-types";
+import type {
+  ConstructorSeasonSummary,
+  RaceListItem,
+  SessionResultEntry,
+} from "@pit-wall-insight/shared-types";
 import type { UseQueryResult } from "@tanstack/react-query";
+
+export interface ConstructorSeasonSummaryWithPitstopAverage extends ConstructorSeasonSummary {
+  pitstopAverage: number;
+}
+
+/** Type predicate narrowing `pitstopAverage` to `number` — pairs with
+ * `.filter()` so a downstream `.pitstopAverage` read never needs a `!`
+ * assertion whose safety depends on the filter and the read staying in
+ * sync by convention alone (Phase 7 audit, Low). */
+export function hasPitstopAverage(
+  entry: ConstructorSeasonSummary,
+): entry is ConstructorSeasonSummaryWithPitstopAverage {
+  return entry.pitstopAverage !== null;
+}
 
 /** This team's combined points per round, reconstructed from the per-race
  * `GET /sessions/{id}/results` queries — no endpoint returns a

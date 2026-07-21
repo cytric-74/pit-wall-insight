@@ -48,10 +48,14 @@ export function Widget({
           </a>
         ) : null}
       </CardHeader>
-      <CardContent className="flex-1">
+      <CardContent className="flex-1" aria-busy={loading}>
         {loading ? (
           <>
-            <span className="sr-only">{`Loading ${title} data…`}</span>
+            <span
+              role="status"
+              aria-live="polite"
+              className="sr-only"
+            >{`Loading ${title} data…`}</span>
             <div aria-hidden="true" className="flex flex-col gap-3">
               <Skeleton className="h-4 w-3/4" />
               <Skeleton className="h-4 w-1/2" />

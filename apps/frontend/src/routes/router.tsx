@@ -7,7 +7,9 @@ import { RootLayout } from "../layouts/RootLayout.js";
 import { RouteholderPage } from "./RouteholderPage.js";
 
 const MissionControlPage = lazy(() =>
-  import("./MissionControlPage.js").then((m) => ({ default: m.MissionControlPage })),
+  import("../features/dashboard/MissionControlPage.js").then((m) => ({
+    default: m.MissionControlPage,
+  })),
 );
 const DriverDossierPage = lazy(() =>
   import("../features/drivers/DriverDossierPage.js").then((m) => ({

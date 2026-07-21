@@ -9,6 +9,27 @@ export interface RoundPosition {
   finish: number | null;
 }
 
+export interface RoundPositionWithFinish extends RoundPosition {
+  finish: number;
+}
+
+export interface RoundPositionWithGridAndFinish extends RoundPositionWithFinish {
+  grid: number;
+}
+
+/** Type predicate narrowing `finish` to `number` — pairs with `.filter()`
+ * so downstream `.finish` reads never need a `!` assertion whose safety
+ * depends on the filter and the read staying in sync by convention alone
+ * (Phase 7 audit, Low). */
+export function hasFinish(row: RoundPosition): row is RoundPositionWithFinish {
+  return row.finish !== null;
+}
+
+/** Same as `hasFinish`, additionally narrowing `grid` to `number`. */
+export function hasGridAndFinish(row: RoundPosition): row is RoundPositionWithGridAndFinish {
+  return row.grid !== null && row.finish !== null;
+}
+
 /** Reconstructs one driver's round-by-round grid/finish positions from the
  * per-race `GET /sessions/{id}/results` queries in `useSessionResultsForRaces`
  * — no single endpoint returns this directly (see `api.ts`). */

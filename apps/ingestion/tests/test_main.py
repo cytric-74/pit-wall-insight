@@ -44,7 +44,7 @@ def test_run_collect_returns_1_for_an_unknown_entity(monkeypatch: pytest.MonkeyP
     args = CollectArgs(
         season=2024,
         round=None,
-        session="R",
+        session_type="R",
         entities=["not-a-real-entity"],
         dry_run=True,
         database_url=None,
@@ -72,7 +72,7 @@ def test_run_collect_isolates_one_entitys_collector_failure_from_the_rest(
     args = CollectArgs(
         season=2024,
         round=None,
-        session="R",
+        session_type="R",
         entities=["broken-entity", "ok-entity"],
         dry_run=True,
         database_url=None,
@@ -94,7 +94,7 @@ def test_run_collect_returns_0_when_every_entity_succeeds(
     monkeypatch.setitem(main.ENTITY_HANDLERS, "ok-entity", _ok_handler)
 
     args = CollectArgs(
-        season=2024, round=None, session="R", entities=["ok-entity"], dry_run=True, database_url=None
+        season=2024, round=None, session_type="R", entities=["ok-entity"], dry_run=True, database_url=None
     )
 
     assert run_collect(args) == 0

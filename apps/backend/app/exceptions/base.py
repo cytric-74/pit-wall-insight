@@ -1,7 +1,8 @@
 """Base application exception.
 
-Feature-specific exceptions (raised from `app/services/`) will subclass
-`AppException` once business logic exists. None do yet.
+Feature-specific exceptions (raised from `app/services/`) subclass
+`AppException` — see `NotFoundError`/`ValidationError`/`NotReadyError`
+below.
 """
 
 from __future__ import annotations
@@ -30,3 +31,10 @@ class NotFoundError(AppException):
 class ValidationError(AppException):
     status_code = 422
     code = "VALIDATION_ERROR"
+
+
+class NotReadyError(AppException):
+    """Raised by `/ready` when a dependency (e.g. the analytics database) is unreachable."""
+
+    status_code = 503
+    code = "NOT_READY"
