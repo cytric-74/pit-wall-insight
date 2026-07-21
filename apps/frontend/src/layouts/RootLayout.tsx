@@ -1,7 +1,8 @@
-import { cn, Spinner } from "@pit-wall-insight/ui";
+import { cn, Spinner, TelemetryCursor } from "@pit-wall-insight/ui";
 import { Suspense, useEffect, useState } from "react";
 import { Outlet } from "react-router";
 
+import { useSmoothScroll } from "../lib/smooth-scroll.js";
 import { CommandPalette } from "./CommandPalette.js";
 import { Footer } from "./Footer.js";
 import { Header } from "./Header.js";
@@ -13,10 +14,15 @@ import { Sidebar } from "./Sidebar.js";
  * Primary Analytics -> Secondary Analytics -> Supporting Panels -> Footer;
  * the Hero/Analytics portion is whatever the current route renders).
  * No dashboard content lives here — only the shell around it.
+ *
+ * Mounts the two app-wide "systems" exactly once here, never per-page:
+ * the Telemetry Probe cursor (docs/assets/07_CURSOR_SYSTEM.md) and Lenis
+ * smooth scroll (docs/assets/04_LAYOUT_SYSTEM.md — "Scroll").
  */
 export function RootLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  useSmoothScroll();
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -55,6 +61,7 @@ export function RootLayout() {
       </div>
 
       <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+      <TelemetryCursor />
     </div>
   );
 }

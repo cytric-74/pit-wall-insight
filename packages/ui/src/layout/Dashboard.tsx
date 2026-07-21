@@ -13,12 +13,12 @@ export interface DashboardProps {
 }
 
 /**
- * The dashboard shell (docs/assets/04_LAYOUT_SYSTEM.md — "Dashboard
- * Layout": Current Season -> Standings -> Key Metrics -> Recent Events ->
- * Navigation; "never place secondary information above primary
- * insights"). Provides the heading and Container; the grid itself is left
- * to `WidgetGrid` since a season-overview panel and a KPI tile are not the
- * same size.
+ * @deprecated Superseded by `Section` as part of the editorial redesign —
+ * "Section Structure" replaces "Dashboard Layout" as the page-composition
+ * primitive (see the redesign strategy: "STOP designing with cards...
+ * everything should feel editorial rather than boxed"). Kept only until
+ * every page still importing `Dashboard`/`WidgetGrid` has migrated to
+ * `Section`; do not use in new code.
  */
 export function Dashboard({ eyebrow, title, description, children, className }: DashboardProps) {
   return (
@@ -45,9 +45,12 @@ export interface WidgetGridProps {
 }
 
 /**
- * Responsive 12-column widget grid. Items size themselves with
- * `laptop:col-span-*` (and optionally `sm:col-span-*` for the tablet
- * step) rather than the grid dictating a fixed layout for every widget.
+ * @deprecated A grid of equal-weight boxes is exactly what the editorial
+ * redesign removes ("never let every widget compete equally" — every page
+ * needs one dominant focal point, not N same-size cells). Compose pages
+ * from `Section` + `Stat`/`StatGroup`/`InstrumentGauge` + charts directly
+ * instead, with hierarchy expressed through type scale and layout, not
+ * `col-span` math.
  */
 export function WidgetGrid({ children, className }: WidgetGridProps) {
   return (

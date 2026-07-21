@@ -65,7 +65,7 @@ export function EChart({
   }, [option, prefersReducedMotion]);
 
   return (
-    <div style={{ height }} className={cn("relative w-full", className)}>
+    <div style={{ height }} data-cursor="chart" className={cn("relative w-full", className)}>
       <div ref={containerRef} role="img" aria-label={ariaLabel} className="h-full w-full" />
       {loading ? (
         <div className="absolute inset-0">

@@ -1,9 +1,8 @@
-import { animate, motion, useInView, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { TrendingDown, TrendingUp } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 
 import { cn } from "../lib/cn.js";
-import { EASE_STANDARD } from "../lib/motion.js";
+import { EASE_STANDARD, useCountUp } from "../lib/motion.js";
 import { Surface } from "../ui/Surface.js";
 
 const MotionSurface = motion.create(Surface);
@@ -58,24 +57,8 @@ export function StatCard({
   duration = 1.2,
   className,
 }: StatCardProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-80px" });
   const prefersReducedMotion = useReducedMotion();
-  const [display, setDisplay] = useState(() => (prefersReducedMotion ? value : 0));
-
-  useEffect(() => {
-    if (!isInView) return;
-    if (prefersReducedMotion) {
-      setDisplay(value);
-      return;
-    }
-    const controls = animate(0, value, {
-      duration,
-      ease: EASE_STANDARD,
-      onUpdate: setDisplay,
-    });
-    return () => controls.stop();
-  }, [isInView, value, duration, prefersReducedMotion]);
+  const { ref, display, isInView } = useCountUp<HTMLDivElement>(value, duration);
 
   const formatNumber = (input: number) =>
     input.toLocaleString(undefined, {

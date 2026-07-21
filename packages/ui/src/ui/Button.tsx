@@ -58,6 +58,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           ref={ref}
           className={cn(buttonVariants({ variant, size, className }))}
           aria-busy={isLoading || undefined}
+          data-cursor="button"
           {...props}
         >
           {children}
@@ -72,6 +73,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size, className }))}
         disabled={disabled || isLoading}
         aria-busy={isLoading || undefined}
+        data-cursor="button"
         {...props}
       >
         {isLoading ? <Spinner className="size-4" aria-hidden="true" /> : null}

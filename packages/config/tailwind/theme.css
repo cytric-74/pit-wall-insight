@@ -60,6 +60,8 @@
   --color-constructor-chart: var(--color-constructor-chart);
   --color-constructor-cursor: var(--color-constructor-cursor);
   --color-constructor-ambient: var(--color-constructor-ambient);
+  --color-constructor-cursor: var(--color-constructor-cursor);
+  --color-constructor-ambient: var(--color-constructor-ambient);
 
   /* --- Fonts -> font-display, font-body, font-mono, font-dotmatrix --- */
   --font-display: var(--font-display);

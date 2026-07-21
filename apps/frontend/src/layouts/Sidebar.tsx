@@ -54,6 +54,7 @@ export function Sidebar({ collapsed, onToggleCollapsed }: SidebarProps) {
             key={item.href}
             to={item.href}
             end={item.href === "/"}
+            data-cursor="button"
             className={({ isActive }) =>
               cn(
                 "flex items-center justify-center gap-3 rounded-md border-l-2 border-transparent px-3 py-2 font-body text-body-sm text-text-secondary transition-colors duration-(--duration-fast) ease-standard hover:bg-surface-hover hover:text-text-primary",

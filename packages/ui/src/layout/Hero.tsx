@@ -32,6 +32,14 @@ export interface HeroProps {
   stats?: readonly HeroStat[];
   actions?: readonly HeroAction[];
   className?: string;
+  /**
+   * "display" (default) is the Space Grotesk page-title treatment every
+   * page uses. "statement" is the dot-matrix "voice of the machine" hero
+   * headline — reserved for the single most important headline in the
+   * entire application (Mission Control), never per-page, so it stays one
+   * deliberate gesture instead of a repeated mannerism.
+   */
+  titleVariant?: "display" | "statement";
 }
 
 /**
@@ -51,7 +59,15 @@ export interface HeroProps {
  * row, and wide-tracked monospace labels — the same dot-matrix vocabulary
  * already reserved for telemetry/live-timing elsewhere in the system.
  */
-export function Hero({ eyebrow, title, description, stats, actions, className }: HeroProps) {
+export function Hero({
+  eyebrow,
+  title,
+  description,
+  stats,
+  actions,
+  className,
+  titleVariant = "display",
+}: HeroProps) {
   const prefersReducedMotion = useReducedMotion();
   const initial = prefersReducedMotion ? "show" : "hidden";
 
@@ -78,7 +94,12 @@ export function Hero({ eyebrow, title, description, stats, actions, className }:
 
             <motion.h1
               variants={itemVariants}
-              className="text-balance font-display text-display-md tracking-tight text-text-primary laptop:text-display-lg"
+              className={cn(
+                "text-balance tracking-tight text-text-primary",
+                titleVariant === "statement"
+                  ? "font-dotmatrix text-display-lg laptop:text-display-xl"
+                  : "font-display text-display-md laptop:text-display-lg",
+              )}
             >
               {title}
             </motion.h1>

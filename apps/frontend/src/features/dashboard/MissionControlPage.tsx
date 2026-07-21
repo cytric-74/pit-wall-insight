@@ -1,22 +1,27 @@
 import type { ConstructorStandingEntry, DriverStandingEntry } from "@pit-wall-insight/shared-types";
-import { Dashboard, Features, Hero, Statistics, Widget, WidgetGrid } from "@pit-wall-insight/ui";
+import { Hero, Section, Stat, StatGroup } from "@pit-wall-insight/ui";
+import type { ReactNode } from "react";
 
-import { FEATURES } from "../../constants/features.js";
-import { STATISTICS } from "../../constants/statistics.js";
 import { EmptyState } from "../../lib/empty-state.js";
 import { QueryError } from "../../lib/query-error.js";
 import { useDashboard, useDashboardHighlights } from "./queries.js";
 
 /**
- * The Hero/Features/Statistics sections stay static marketing copy; the
- * `Dashboard` section is backed by `GET /dashboard` and
- * `GET /dashboard/highlights` (docs/08_API_SPECIFICATION.md — "Dashboard").
+ * Mission Control — the flagship page (docs/assets/04_LAYOUT_SYSTEM.md —
+ * "Dashboard Layout": Current Season -> Standings -> Key Metrics -> Recent
+ * Events; "never place secondary information above primary insights").
  *
- * Lives in `features/dashboard/` like every other routed page
- * (`features/<name>/<Name>Page.tsx`) — the component is still named
- * `MissionControlPage` to match the product's own branding for this page
- * (see the Hero's `eyebrow`/`title` below), not the underlying feature
- * folder name.
+ * Rebuilt around the four-slot editorial model instead of a widget grid:
+ * one dot-matrix hero statement (the only page in the app that uses the
+ * "statement" title treatment — reserved for this one moment), one
+ * dominant analytical focus (the championship gap — "how close is the
+ * title fight," not just a restated points total), then standings and
+ * performance figures clearly demoted below it. The static "Features"/
+ * "Statistics" marketing bands are gone — the sidebar already covers
+ * navigation, and restating capability areas in prose duplicated it.
+ *
+ * `Section`/`Stat`/`StatGroup` replace `Widget`/`WidgetGrid`/`Dashboard` —
+ * no bordered boxes anywhere on this page.
  */
 export function MissionControlPage() {
   const dashboardQuery = useDashboard();
@@ -27,145 +32,144 @@ export function MissionControlPage() {
   return (
     <>
       <Hero
+        titleVariant="statement"
         eyebrow="Mission Control"
         title="Every lap. Every decision. Understood."
         description="Formula One telemetry, strategy, and race intelligence in one engineering-grade analytics platform."
-        stats={[
-          { label: "Seasons", value: "75" },
-          { label: "Drivers", value: "20" },
-          { label: "Constructors", value: "10" },
-          { label: "Circuits", value: "24" },
-        ]}
         actions={[
           { label: "Explore season", href: "/season", variant: "primary" },
           { label: "View telemetry", href: "/telemetry", variant: "secondary" },
         ]}
       />
-      <Features
-        eyebrow="Capabilities"
-        title="One platform, every angle of the weekend."
-        description="Each area is a dedicated analytics instrument, not another chart bolted onto a dashboard."
-        features={FEATURES}
-      />
-      <Statistics
-        eyebrow="This season"
-        title="The numbers behind the season."
-        description="A snapshot of what's been tracked so far."
-        stats={STATISTICS}
-      />
-      <Dashboard
+
+      <Section
         eyebrow="Live data"
-        title="Season at a glance."
-        description="Current season, driver and constructor standings, and the latest race."
+        title="Season at a glance"
+        description="The championship fight, right now."
       >
-        <WidgetGrid>
-          <Widget
-            title="Season overview"
-            description="Current season progress"
-            href="/season"
-            linkLabel="Season Explorer"
-            loading={dashboardQuery.isPending}
-            className="sm:col-span-2 laptop:col-span-12"
-          >
-            {dashboardQuery.isError ? (
-              <QueryError />
-            ) : dashboard ? (
-              <div className="flex flex-col gap-2">
-                <span className="text-body-sm text-text-primary">{dashboard.season} season</span>
-                <span className="text-caption text-text-muted">
-                  Championship leader: {dashboard.championDriver ?? "—"}
-                </span>
-                <span className="text-caption text-text-muted">
-                  Constructors leader: {dashboard.championConstructor ?? "—"}
-                </span>
-              </div>
-            ) : null}
-          </Widget>
-          <Widget
-            title="Driver standings"
-            description="Championship order"
+        {dashboardQuery.isError ? (
+          <QueryError />
+        ) : dashboardQuery.isPending ? (
+          <EmptyState message="Syncing telemetry…" />
+        ) : (
+          <StatGroup>
+            <Stat
+              label="Championship gap"
+              value={dashboard?.championshipGap ?? "—"}
+              variant="hero"
+              caption="Between P1 and P2"
+              {...(dashboard?.championshipGap != null && { unit: "pts" })}
+            />
+            <Stat label="Season" value={dashboard?.season ?? "—"} />
+            <Stat label="Leader" value={dashboard?.championDriver ?? "—"} />
+            <Stat label="Leading team" value={dashboard?.championConstructor ?? "—"} />
+          </StatGroup>
+        )}
+      </Section>
+
+      <Section title="Standings" description="Top five in each championship.">
+        <div className="grid grid-cols-1 gap-x-16 gap-y-10 laptop:grid-cols-2">
+          <StandingsColumn
+            title="Drivers"
             href="/drivers"
             linkLabel="Driver Dossier"
             loading={dashboardQuery.isPending}
-            className="laptop:col-span-6"
+            error={dashboardQuery.isError}
           >
-            {dashboardQuery.isError ? (
-              <QueryError />
-            ) : dashboard ? (
-              <DriverStandingsList entries={dashboard.driverStandings} />
-            ) : null}
-          </Widget>
-          <Widget
-            title="Constructor standings"
-            description="Championship order"
+            <DriverStandingsList entries={dashboard?.driverStandings ?? []} />
+          </StandingsColumn>
+          <StandingsColumn
+            title="Constructors"
             href="/constructors"
             linkLabel="Constructor Intelligence"
             loading={dashboardQuery.isPending}
-            className="laptop:col-span-6"
+            error={dashboardQuery.isError}
           >
-            {dashboardQuery.isError ? (
-              <QueryError />
-            ) : dashboard ? (
-              <ConstructorStandingsList entries={dashboard.constructorStandings} />
-            ) : null}
-          </Widget>
-          <KpiWidget
-            title="Fastest lap"
-            href="/telemetry"
-            linkLabel="Telemetry Center"
-            loading={dashboardQuery.isPending}
-            isError={dashboardQuery.isError}
-            value={
-              dashboard?.fastestLapTime != null ? `${dashboard.fastestLapTime.toFixed(3)}s` : null
-            }
-            sublabel={dashboard?.fastestLapDriver ?? undefined}
-          />
-          <KpiWidget
-            title="Avg. pit stop"
-            href="/strategy"
-            linkLabel="Strategy Lab"
-            loading={dashboardQuery.isPending}
-            isError={dashboardQuery.isError}
-            value={
-              dashboard?.fastestPitstop != null ? `${dashboard.fastestPitstop.toFixed(1)}s` : null
-            }
-          />
-          <KpiWidget
-            title="Overtakes"
-            href="/races"
-            linkLabel="Race Playback"
-            loading={dashboardQuery.isPending}
-            isError={dashboardQuery.isError}
-            value={
-              dashboard?.averageOvertakes != null ? dashboard.averageOvertakes.toFixed(1) : null
-            }
-          />
-          <Widget
-            title="Recent race summary"
-            description="Latest completed round"
-            href="/races"
-            linkLabel="Race Playback"
-            loading={highlightsQuery.isPending}
-            className="sm:col-span-2 laptop:col-span-12"
-          >
-            {highlightsQuery.isError ? (
-              <QueryError />
-            ) : highlights ? (
-              <div className="flex flex-col gap-2">
-                <span className="text-body-sm text-text-primary">{highlights.raceName ?? "—"}</span>
-                <span className="text-caption text-text-muted">
-                  Winner: {highlights.winner ?? "—"}
-                </span>
-                <span className="text-caption text-text-muted">Pole: {highlights.pole ?? "—"}</span>
-                <span className="text-caption text-text-muted">
-                  Fastest lap: {highlights.fastestLap ?? "—"}
-                </span>
-              </div>
-            ) : null}
-          </Widget>
-        </WidgetGrid>
-      </Dashboard>
+            <ConstructorStandingsList entries={dashboard?.constructorStandings ?? []} />
+          </StandingsColumn>
+        </div>
+      </Section>
+
+      <Section
+        title="Performance"
+        description="Fastest lap, quickest average pit stop, and overtakes recorded this season."
+      >
+        {dashboardQuery.isError ? (
+          <QueryError />
+        ) : dashboardQuery.isPending ? (
+          <EmptyState message="Syncing telemetry…" />
+        ) : (
+          <StatGroup>
+            <Stat
+              label="Fastest lap"
+              value={dashboard?.fastestLapTime != null ? dashboard.fastestLapTime.toFixed(3) : "—"}
+              unit="s"
+              {...(dashboard?.fastestLapDriver != null && { caption: dashboard.fastestLapDriver })}
+            />
+            <Stat
+              label="Avg. pit stop"
+              value={dashboard?.fastestPitstop != null ? dashboard.fastestPitstop.toFixed(1) : "—"}
+              unit="s"
+            />
+            <Stat
+              label="Overtakes"
+              value={
+                dashboard?.averageOvertakes != null ? dashboard.averageOvertakes.toFixed(1) : "—"
+              }
+            />
+          </StatGroup>
+        )}
+      </Section>
+
+      <Section
+        title="Latest race"
+        description={highlights?.raceName ?? "Most recent completed round."}
+      >
+        {highlightsQuery.isError ? (
+          <QueryError />
+        ) : highlightsQuery.isPending ? (
+          <EmptyState message="Syncing telemetry…" />
+        ) : (
+          <StatGroup>
+            <Stat label="Winner" value={highlights?.winner ?? "—"} />
+            <Stat label="Pole" value={highlights?.pole ?? "—"} />
+            <Stat label="Fastest lap" value={highlights?.fastestLap ?? "—"} />
+            <Stat label="Retirements" value={highlights?.retirements ?? "—"} />
+          </StatGroup>
+        )}
+      </Section>
     </>
+  );
+}
+
+function StandingsColumn({
+  title,
+  href,
+  linkLabel,
+  loading,
+  error,
+  children,
+}: {
+  title: string;
+  href: string;
+  linkLabel: string;
+  loading: boolean;
+  error: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-baseline justify-between gap-4">
+        <h3 className="font-display text-heading-sm text-text-primary">{title}</h3>
+        <a
+          href={href}
+          className="shrink-0 text-label-md text-constructor-primary transition-colors duration-(--duration-fast) ease-standard hover:text-accent-hover"
+        >
+          {linkLabel}
+        </a>
+      </div>
+      {error ? <QueryError /> : loading ? <EmptyState message="Syncing telemetry…" /> : children}
+    </div>
   );
 }
 
@@ -189,7 +193,7 @@ function StandingsRow({
         </span>
         <span className="text-body-sm text-text-primary">{label}</span>
       </span>
-      <span className="text-caption text-text-muted">{points} pts</span>
+      <span className="font-mono text-caption tabular-nums text-text-muted">{points} pts</span>
     </li>
   );
 }
@@ -227,61 +231,5 @@ function ConstructorStandingsList({ entries }: { entries: readonly ConstructorSt
         />
       ))}
     </ol>
-  );
-}
-
-interface KpiWidgetProps {
-  title: string;
-  href: string;
-  linkLabel: string;
-  loading: boolean;
-  isError?: boolean | undefined;
-  value?: string | null | undefined;
-  sublabel?: string | undefined;
-}
-
-/**
- * A single-value KPI tile. Shows an explicit "no data" state rather than a
- * fabricated number whenever `value` is null/undefined — including once
- * wired up, since some metrics (e.g. average pit stop, pending Phase 4's
- * documented pit-stop-detection gap) can genuinely have no value yet
- * (docs/assets/02_TYPOGRAPHY_SYSTEM.md — "Empty States"). `isError` is a
- * distinct state from "no data yet": the latter means the metric
- * genuinely has no value; the former means the request failed and the
- * value is simply unknown.
- */
-function KpiWidget({ title, href, linkLabel, loading, isError, value, sublabel }: KpiWidgetProps) {
-  return (
-    <Widget
-      title={title}
-      href={href}
-      linkLabel={linkLabel}
-      loading={loading}
-      className="laptop:col-span-4"
-    >
-      {isError ? (
-        <QueryError />
-      ) : (
-        <div className="flex items-baseline gap-2">
-          {value ? (
-            <>
-              <span className="font-mono text-heading-xl text-text-primary">{value}</span>
-              {sublabel ? (
-                <span className="font-mono text-caption uppercase tracking-wide text-text-muted">
-                  {sublabel}
-                </span>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <span className="font-mono text-heading-xl text-text-disabled">—</span>
-              <span className="font-mono text-caption uppercase tracking-wide text-text-muted">
-                No data yet
-              </span>
-            </>
-          )}
-        </div>
-      )}
-    </Widget>
   );
 }

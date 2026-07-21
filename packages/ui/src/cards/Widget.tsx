@@ -17,11 +17,14 @@ export interface WidgetProps {
 }
 
 /**
- * A single dashboard panel — "AnalyticsCard"/"SummaryCard"
- * (docs/09_COMPONENT_LIBRARY.md — "Cards"). Domain-agnostic: the caller
- * supplies the title, content, and optional "view more" link; this only
- * standardizes the card's structure and its loading placeholder, the same
- * way `Card` standardizes header/content/footer generally.
+ * @deprecated Boxed dashboard panels are the thing the editorial redesign
+ * removes — see the redesign strategy: "Only use containers where
+ * functionally necessary: dialogs, dropdowns, popovers, command palette."
+ * Use `Section` for page composition and `Stat`/`InstrumentGauge` for the
+ * content that used to live inside a `Widget`. Kept only until every page
+ * has migrated (tracked page by page: Mission Control, Driver Dossier,
+ * Circuit Explorer, Constructor Intelligence, Race Playback, Telemetry,
+ * Strategy, Season, Settings) — delete once none remain.
  */
 export function Widget({
   title,

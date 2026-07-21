@@ -56,4 +56,21 @@
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
   }
+
+  /*
+   * Telemetry Probe (docs/assets/07_CURSOR_SYSTEM.md). `<TelemetryCursor>`
+   * toggles this class on <html> only when it's actually rendering (fine
+   * pointer, motion not reduced) — the native cursor is hidden everywhere
+   * *except* text/input contexts, which always keep their native
+   * I-beam/pointer per "Text Selection: Always use native I-Beam" and
+   * "Input Fields: use native text cursor, never interfere."
+   */
+  html.pw-cursor-active {
+    cursor: none;
+  }
+  html.pw-cursor-active input,
+  html.pw-cursor-active textarea,
+  html.pw-cursor-active [contenteditable="true"] {
+    cursor: text;
+  }
 }
