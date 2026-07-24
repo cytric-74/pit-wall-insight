@@ -22,7 +22,6 @@
  */
 
 export * from "./Container.js";
-export * from "./Dashboard.js";
 export * from "./Hero.js";
 export * from "./InstrumentGauge.js";
 export * from "./Section.js";

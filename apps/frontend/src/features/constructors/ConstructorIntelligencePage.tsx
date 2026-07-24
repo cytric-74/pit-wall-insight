@@ -3,12 +3,13 @@ import {
   BarChart,
   Container,
   Hero,
+  InstrumentGauge,
   isConstructorId,
   LineChart,
+  Section,
   Select,
+  Stat,
   useConstructorTheme,
-  Widget,
-  WidgetGrid,
 } from "@pit-wall-insight/ui";
 import { useEffect, useState } from "react";
 
@@ -36,16 +37,24 @@ import {
  * Pit Strategy -> Development Trend -> Driver Comparison). Backed by
  * `/api/v1/constructors/*` (docs/08_API_SPECIFICATION.md — "Constructors").
  *
+ * Editorial rebuild: "Season performance" is the one primary, full-width
+ * analytical focus. Pit stop efficiency (a genuine per-season trend) and
+ * driver comparison are demoted into a single secondary "Team form"
+ * section. "Reliability" drops its `<dl>` rows for an `InstrumentGauge` —
+ * DNF rate is exactly the single-dimension "where does this sit between
+ * two ends" reading the gauge exists for. "Strategy tendencies" — a
+ * permanent fake-loading placeholder with no data source on this page —
+ * becomes a plain pointer to Strategy Lab instead.
+ *
  * The team selector here also drives the *global* constructor theme
  * (docs/01_PRODUCT_REQUIREMENTS.md Journey 2: "User selects Ferrari ->
  * entire interface adapts to Ferrari branding -> charts adopt Ferrari
- * theme"). That's why the charts on this page pass no explicit colors:
- * they inherit the active theme, which this page keeps in sync with the
- * selected team. Selection is initialized *from* the active theme so
- * arriving with McLaren branding shows McLaren, not a hardcoded default —
- * done in an effect (rather than a lazy `useState` initializer, like the
- * old sample-data version used) since the real team list only exists once
- * `useConstructors` has loaded.
+ * theme") — the Hero's ambient glow already picks up that accent via
+ * `--color-constructor-glow`, which is this page's "team color wash"
+ * rather than a fabricated car illustration (no real constructor SVGs
+ * exist yet; see the redesign brief's media pipeline). Selection is
+ * initialized *from* the active theme so arriving with McLaren branding
+ * shows McLaren, not a hardcoded default.
  */
 export function ConstructorIntelligencePage() {
   const { constructorId: activeThemeId, setConstructor } = useConstructorTheme();
@@ -88,6 +97,7 @@ export function ConstructorIntelligencePage() {
   const driverPointsPerRound = extractDriverPointsByRound(races, resultsQueries, driverNames);
 
   const pitStopRows = performance.filter(hasPitstopAverage);
+  const dnfRatePercent = statistics?.dnfRate != null ? statistics.dnfRate * 100 : null;
 
   function handleSelect(id: string) {
     setSelectedId(id);
@@ -120,43 +130,37 @@ export function ConstructorIntelligencePage() {
         ]}
       />
 
-      <Container className="flex flex-col gap-8 pb-(--section-gap)">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <Select
-            label="Constructor"
-            {...(constructorId !== undefined && { value: constructorId })}
-            onValueChange={handleSelect}
-            options={constructors.map((item) => ({ value: item.id, label: item.teamName }))}
-            className="min-w-64"
+      <Container className="flex flex-wrap items-end justify-between gap-4 py-8">
+        <Select
+          label="Constructor"
+          {...(constructorId !== undefined && { value: constructorId })}
+          onValueChange={handleSelect}
+          options={constructors.map((item) => ({ value: item.id, label: item.teamName }))}
+          className="min-w-64"
+        />
+      </Container>
+
+      <Section title="Season performance" description="Championship points after each round.">
+        {resultsError ? (
+          <QueryError />
+        ) : (
+          <AreaChart
+            categories={races.map((race) => `R${race.round}`)}
+            series={[{ name: team?.teamName ?? "Team", data: cumulativePoints }]}
+            yAxisLabel="Points"
+            valueFormatter={(value) => `${value} pts`}
+            ariaLabel={`${team?.teamName ?? "Constructor"} championship points progression`}
+            height={400}
           />
-        </div>
+        )}
+      </Section>
 
-        <WidgetGrid>
-          <Widget
-            title="Season performance"
-            description="Championship points after each round."
-            loading={resultsLoading}
-            className="sm:col-span-2 laptop:col-span-12"
-          >
-            {resultsError ? (
-              <QueryError />
-            ) : (
-              <AreaChart
-                categories={races.map((race) => `R${race.round}`)}
-                series={[{ name: team?.teamName ?? "Team", data: cumulativePoints }]}
-                yAxisLabel="Points"
-                valueFormatter={(value) => `${value} pts`}
-                ariaLabel={`${team?.teamName ?? "Constructor"} championship points progression`}
-              />
-            )}
-          </Widget>
-
-          <Widget
-            title="Pit stop efficiency"
-            description="Average stationary time per season — lower is better."
-            loading={performanceQuery.isPending}
-            className="laptop:col-span-6"
-          >
+      <Section title="Team form" description="Pit stop trend and driver contribution this season.">
+        <div className="grid grid-cols-1 gap-x-16 gap-y-10 laptop:grid-cols-2">
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Pit stop efficiency
+            </h3>
             {performanceQuery.isError ? (
               <QueryError />
             ) : (
@@ -173,14 +177,12 @@ export function ConstructorIntelligencePage() {
                 ariaLabel={`${team?.teamName ?? "Constructor"} average pit stop time per season`}
               />
             )}
-          </Widget>
+          </div>
 
-          <Widget
-            title="Driver comparison"
-            description="Points scored per round by each driver."
-            loading={resultsLoading || driversQuery.isPending}
-            className="laptop:col-span-6"
-          >
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Driver comparison
+            </h3>
             {resultsError || driversQuery.isError ? (
               <QueryError />
             ) : (
@@ -195,57 +197,52 @@ export function ConstructorIntelligencePage() {
                 ariaLabel={`${team?.teamName ?? "Constructor"} driver points comparison`}
               />
             )}
-          </Widget>
+          </div>
+        </div>
+        {resultsLoading ? (
+          <p className="mt-6 font-mono text-caption uppercase tracking-wide text-text-muted">
+            Syncing telemetry…
+          </p>
+        ) : null}
+      </Section>
 
-          <Widget
-            title="Reliability"
-            description="Season reliability record."
-            loading={statisticsQuery.isPending}
-            className="laptop:col-span-6"
-          >
-            {statisticsQuery.isError ? (
-              <QueryError />
-            ) : (
-              <dl className="flex flex-col gap-3">
-                <ReliabilityRow
-                  label="Seasons competed"
-                  value={statistics ? String(statistics.seasonsCompeted) : "—"}
-                />
-                <ReliabilityRow
-                  label="DNF rate"
-                  value={
-                    statistics?.dnfRate != null ? `${(statistics.dnfRate * 100).toFixed(0)}%` : "—"
-                  }
-                />
-                <ReliabilityRow
-                  label="Avg. points per race"
-                  value={
-                    statistics?.averagePoints != null ? statistics.averagePoints.toFixed(1) : "—"
-                  }
-                />
-              </dl>
-            )}
-          </Widget>
+      <Section title="Reliability" description="Season reliability record.">
+        {statisticsQuery.isError ? (
+          <QueryError />
+        ) : (
+          <div className="grid grid-cols-1 items-start gap-x-16 gap-y-10 laptop:grid-cols-[minmax(0,1fr)_280px]">
+            <InstrumentGauge
+              label="DNF rate"
+              value={dnfRatePercent ?? 0}
+              minLabel="Reliable"
+              maxLabel="DNF-prone"
+              {...(dnfRatePercent != null && { valueLabel: `${dnfRatePercent.toFixed(0)}%` })}
+            />
+            <div className="flex flex-col gap-8 border-t border-border-subtle pt-8 laptop:border-l laptop:border-t-0 laptop:pl-12 laptop:pt-0">
+              <Stat
+                label="Seasons competed"
+                value={statistics ? statistics.seasonsCompeted : "—"}
+              />
+              <Stat
+                label="Avg. points per race"
+                value={
+                  statistics?.averagePoints != null ? statistics.averagePoints.toFixed(1) : "—"
+                }
+              />
+            </div>
+          </div>
+        )}
 
-          <Widget
-            title="Strategy tendencies"
-            description="Stint lengths, compound choices, and pit windows"
+        <p className="mt-10 font-mono text-caption uppercase tracking-wide text-text-muted">
+          Stint lengths, compound choices, and pit windows —{" "}
+          <a
             href="/strategy"
-            linkLabel="Strategy Lab"
-            loading
-            className="laptop:col-span-6"
-          />
-        </WidgetGrid>
-      </Container>
+            className="text-constructor-primary transition-colors duration-(--duration-fast) ease-standard hover:text-accent-hover"
+          >
+            Strategy Lab
+          </a>
+        </p>
+      </Section>
     </>
-  );
-}
-
-function ReliabilityRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-baseline justify-between border-b border-border-subtle pb-3">
-      <dt className="font-mono text-caption uppercase tracking-wide text-text-muted">{label}</dt>
-      <dd className="font-mono text-body-md tabular-nums text-text-primary">{value}</dd>
-    </div>
   );
 }

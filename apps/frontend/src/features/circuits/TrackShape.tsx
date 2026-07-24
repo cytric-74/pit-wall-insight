@@ -1,3 +1,5 @@
+import { AnimatedTrace } from "@pit-wall-insight/ui";
+
 /**
  * Abstract placeholder track outlines — not geographically accurate to
  * the real circuits (docs/assets/10_ICONOGRAPHY.md: "Circuit Icons: use
@@ -7,6 +9,11 @@
  * (apps/backend/app/models/gold/circuit.py), so there is no real trace to
  * draw instead — see `pickTrackShape` in `./utils.ts` for how a circuit is
  * assigned one of these three purely for visual variety.
+ *
+ * This is Circuit Explorer's organizing graphic (the redesign brief: the
+ * track blueprint "stops being one widget among four and becomes the
+ * page's organizing graphic"), so the stroke draws itself in on mount via
+ * the shared `AnimatedTrace` primitive rather than appearing instantly.
  */
 export type TrackShapeKind = "loop" | "chicane" | "oval";
 
@@ -19,15 +26,11 @@ const TRACK_PATHS: Record<TrackShapeKind, string> = {
 
 export function TrackShape({ shape }: { shape: TrackShapeKind }) {
   return (
-    <svg
+    <AnimatedTrace
+      d={TRACK_PATHS[shape]}
       viewBox="0 0 260 180"
       className="h-auto w-full text-constructor-primary"
-      fill="none"
-      role="img"
-      aria-label="Abstract circuit track outline"
-    >
-      <rect x="0.5" y="0.5" width="259" height="179" rx="16" className="stroke-border-default" />
-      <path d={TRACK_PATHS[shape]} stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
+      ariaLabel="Abstract circuit track outline"
+    />
   );
 }

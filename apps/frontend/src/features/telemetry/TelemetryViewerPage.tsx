@@ -7,10 +7,9 @@ import {
   getConstructorTheme,
   Hero,
   LineChart,
+  Section,
   Select,
   usePreferences,
-  Widget,
-  WidgetGrid,
 } from "@pit-wall-insight/ui";
 import { useState } from "react";
 
@@ -25,6 +24,17 @@ const DEFAULT_SESSION_ID = SAMPLE_TELEMETRY_SESSIONS[0]!.id;
  * always occupies the largest visual area."). Runs on the sample data
  * in ./data.ts — visibly badged as such — until the telemetry endpoints
  * (`fct_telemetry`) exist.
+ *
+ * Editorial rebuild: "Speed trace" is the one primary, full-width focus.
+ * Throttle/brake/gear/RPM stay full channel traces rather than becoming
+ * `InstrumentGauge` single-value readouts — collapsing a whole lap's
+ * throttle profile into one number would lose exactly the thing this page
+ * exists to show (*where* on track it changes, not just an average), so
+ * fidelity to the data wins over mechanically applying the gauge
+ * treatment everywhere. They're demoted instead by being paired into two
+ * secondary two-column sections (throttle+brake, gear+RPM) beneath the
+ * primary trace, plus a third pairing sector analysis with session
+ * metadata — never five-plus equal-weight boxes.
  *
  * Scope note: docs/01_PRODUCT_REQUIREMENTS.md also lists "Racing line
  * comparison" and "Corner analysis" for this page — both need the
@@ -89,43 +99,41 @@ export function TelemetryViewerPage() {
         ]}
       />
 
-      <Container className="flex flex-col gap-8 pb-(--section-gap)">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <Select
-            label="Session"
-            value={sessionId}
-            onValueChange={setSessionId}
-            options={SAMPLE_TELEMETRY_SESSIONS.map((item) => ({
-              value: item.id,
-              label: `${item.circuit} — ${item.sessionName}`,
-            }))}
-            className="min-w-72"
-          />
-          <Badge variant="warning">Sample data</Badge>
-        </div>
+      <Container className="flex flex-wrap items-end justify-between gap-4 py-8">
+        <Select
+          label="Session"
+          value={sessionId}
+          onValueChange={setSessionId}
+          options={SAMPLE_TELEMETRY_SESSIONS.map((item) => ({
+            value: item.id,
+            label: `${item.circuit} — ${item.sessionName}`,
+          }))}
+          className="min-w-72"
+        />
+        <Badge variant="warning">Sample data</Badge>
+      </Container>
 
-        <WidgetGrid>
-          <Widget
-            title="Speed trace"
-            description={`${driverA.abbreviation} vs ${driverB.abbreviation} — speed across the lap.`}
-            className="sm:col-span-2 laptop:col-span-12"
-          >
-            <LineChart
-              categories={DISTANCE_MARKERS}
-              series={speedSeries}
-              xAxisLabel="Distance"
-              yAxisLabel={speedUnitLabel}
-              valueFormatter={(value) => `${Math.round(value)} ${speedUnitLabel}`}
-              ariaLabel={`${session.sessionName} speed trace, sample data`}
-              height={360}
-            />
-          </Widget>
+      <Section
+        title="Speed trace"
+        description={`${driverA.abbreviation} vs ${driverB.abbreviation} — speed across the lap.`}
+      >
+        <LineChart
+          categories={DISTANCE_MARKERS}
+          series={speedSeries}
+          xAxisLabel="Distance"
+          yAxisLabel={speedUnitLabel}
+          valueFormatter={(value) => `${Math.round(value)} ${speedUnitLabel}`}
+          ariaLabel={`${session.sessionName} speed trace, sample data`}
+          height={400}
+        />
+      </Section>
 
-          <Widget
-            title="Throttle"
-            description="Throttle application across the lap."
-            className="laptop:col-span-6"
-          >
+      <Section title="Throttle & brake" description="Pedal application across the lap.">
+        <div className="grid grid-cols-1 gap-x-16 gap-y-10 laptop:grid-cols-2">
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Throttle
+            </h3>
             <AreaChart
               categories={DISTANCE_MARKERS}
               series={channelSeries("throttle")}
@@ -133,13 +141,11 @@ export function TelemetryViewerPage() {
               valueFormatter={(value) => `${value}%`}
               ariaLabel={`${session.sessionName} throttle trace, sample data`}
             />
-          </Widget>
-
-          <Widget
-            title="Brake"
-            description="Brake pressure across the lap."
-            className="laptop:col-span-6"
-          >
+          </div>
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Brake
+            </h3>
             <AreaChart
               categories={DISTANCE_MARKERS}
               series={channelSeries("brake")}
@@ -147,13 +153,14 @@ export function TelemetryViewerPage() {
               valueFormatter={(value) => `${value}%`}
               ariaLabel={`${session.sessionName} brake trace, sample data`}
             />
-          </Widget>
+          </div>
+        </div>
+      </Section>
 
-          <Widget
-            title="Gear"
-            description="Gear selection across the lap."
-            className="laptop:col-span-6"
-          >
+      <Section title="Gear & RPM" description="Powertrain response across the lap.">
+        <div className="grid grid-cols-1 gap-x-16 gap-y-10 laptop:grid-cols-2">
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">Gear</h3>
             <LineChart
               categories={DISTANCE_MARKERS}
               series={channelSeries("gear")}
@@ -161,13 +168,9 @@ export function TelemetryViewerPage() {
               valueFormatter={(value) => String(value)}
               ariaLabel={`${session.sessionName} gear trace, sample data`}
             />
-          </Widget>
-
-          <Widget
-            title="RPM"
-            description="Engine RPM across the lap."
-            className="laptop:col-span-6"
-          >
+          </div>
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">RPM</h3>
             <LineChart
               categories={DISTANCE_MARKERS}
               series={channelSeries("rpm")}
@@ -175,13 +178,16 @@ export function TelemetryViewerPage() {
               valueFormatter={(value) => value.toLocaleString()}
               ariaLabel={`${session.sessionName} RPM trace, sample data`}
             />
-          </Widget>
+          </div>
+        </div>
+      </Section>
 
-          <Widget
-            title="Sector analysis"
-            description="Sector time comparison for this lap."
-            className="laptop:col-span-6"
-          >
+      <Section title="Lap detail" description="Sector time comparison and session context.">
+        <div className="grid grid-cols-1 gap-x-16 gap-y-10 laptop:grid-cols-2">
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Sector analysis
+            </h3>
             <BarChart
               categories={session.sectors.map((sector) => sector.sector)}
               series={[
@@ -199,13 +205,11 @@ export function TelemetryViewerPage() {
               valueFormatter={(value) => `${value.toFixed(3)}s`}
               ariaLabel={`${session.sessionName} sector time comparison, sample data`}
             />
-          </Widget>
-
-          <Widget
-            title="Session metadata"
-            description="Context for this telemetry sample."
-            className="laptop:col-span-6"
-          >
+          </div>
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Session metadata
+            </h3>
             <ol className="flex flex-col gap-2">
               {[
                 { label: "Circuit", value: session.circuit },
@@ -224,9 +228,9 @@ export function TelemetryViewerPage() {
                 </li>
               ))}
             </ol>
-          </Widget>
-        </WidgetGrid>
-      </Container>
+          </div>
+        </div>
+      </Section>
     </>
   );
 }

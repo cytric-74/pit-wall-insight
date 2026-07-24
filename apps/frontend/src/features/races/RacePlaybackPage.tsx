@@ -5,10 +5,9 @@ import {
   getConstructorTheme,
   Hero,
   LineChart,
+  Section,
   Select,
   usePreferences,
-  Widget,
-  WidgetGrid,
 } from "@pit-wall-insight/ui";
 import { useState } from "react";
 
@@ -32,11 +31,17 @@ import { buildPositionSeries, buildStrategyEvents, estimateRaceLaps } from "./ut
  * Analytics -> Race Events -> Driver Tracking). Backed by
  * `/api/v1/races/*` (docs/08_API_SPECIFICATION.md — "Races").
  *
- * Scope note: this implements the analytics half of that layout (position
- * changes, weather, pit stops, the event timeline, final classification).
- * The doc's "Playback Controls" — scrubbing lap-by-lap with synchronized
- * telemetry — needs a dedicated timeline/scrubber component (and
- * telemetry data) that don't exist; it isn't attempted here.
+ * Editorial rebuild: "Position changes" is the one primary, full-width
+ * focus — the actual story of a race. Weather/pit stops and race
+ * events/final classification are demoted into two secondary two-column
+ * sections rather than five equal-weight boxes.
+ *
+ * Scope note: this implements the analytics half of the documented layout
+ * (position changes, weather, pit stops, the event timeline, final
+ * classification). The doc's "Playback Controls" — scrubbing lap-by-lap
+ * with synchronized telemetry — needs a dedicated timeline/scrubber
+ * component (and telemetry data) that don't exist; it isn't attempted
+ * here.
  *
  * "Weather evolution" became a single snapshot, not a per-lap chart —
  * `dim_weather` is one aggregated row per session (see
@@ -108,56 +113,53 @@ export function RacePlaybackPage() {
         ]}
       />
 
-      <Container className="flex flex-col gap-8 pb-(--section-gap)">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <Select
-            label="Race"
-            {...(raceId !== undefined && { value: raceId })}
-            onValueChange={setSelectedId}
-            options={races.map((item) => ({
-              value: item.id,
-              label: item.raceName ?? `Round ${item.round}`,
-            }))}
-            className="min-w-64"
+      <Container className="flex flex-wrap items-end justify-between gap-4 py-8">
+        <Select
+          label="Race"
+          {...(raceId !== undefined && { value: raceId })}
+          onValueChange={setSelectedId}
+          options={races.map((item) => ({
+            value: item.id,
+            label: item.raceName ?? `Round ${item.round}`,
+          }))}
+          className="min-w-64"
+        />
+      </Container>
+
+      <Section
+        title="Position changes"
+        description="Race position after each lap — lower is better."
+      >
+        {positionsQuery.isError ? (
+          <QueryError />
+        ) : (
+          <LineChart
+            categories={positionChart.categories}
+            series={positionChart.series.map((entry) => {
+              const teamColor = getConstructorTheme(
+                resolveConstructorId(teamByDriver.get(entry.driver)),
+              );
+              return {
+                name: entry.driver,
+                data: entry.data,
+                ...(teamColor ? { color: teamColor.primary } : {}),
+              };
+            })}
+            yAxisLabel="Position"
+            yAxisInverse
+            valueFormatter={(value) => `P${value}`}
+            ariaLabel={`${race?.raceName ?? "Race"} position changes by lap`}
+            height={400}
           />
-        </div>
+        )}
+      </Section>
 
-        <WidgetGrid>
-          <Widget
-            title="Position changes"
-            description="Race position after each lap — lower is better."
-            loading={positionsQuery.isPending}
-            className="sm:col-span-2 laptop:col-span-12"
-          >
-            {positionsQuery.isError ? (
-              <QueryError />
-            ) : (
-              <LineChart
-                categories={positionChart.categories}
-                series={positionChart.series.map((entry) => {
-                  const teamColor = getConstructorTheme(
-                    resolveConstructorId(teamByDriver.get(entry.driver)),
-                  );
-                  return {
-                    name: entry.driver,
-                    data: entry.data,
-                    ...(teamColor ? { color: teamColor.primary } : {}),
-                  };
-                })}
-                yAxisLabel="Position"
-                yAxisInverse
-                valueFormatter={(value) => `P${value}`}
-                ariaLabel={`${race?.raceName ?? "Race"} position changes by lap`}
-              />
-            )}
-          </Widget>
-
-          <Widget
-            title="Weather"
-            description="Track/air conditions for this session."
-            loading={weatherQuery.isPending}
-            className="laptop:col-span-6"
-          >
+      <Section title="Conditions" description="Track/air conditions and pit stop durations.">
+        <div className="grid grid-cols-1 gap-x-16 gap-y-10 laptop:grid-cols-2">
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Weather
+            </h3>
             {weatherQuery.isError ? (
               <QueryError />
             ) : (
@@ -189,14 +191,12 @@ export function RacePlaybackPage() {
                 </p>
               </>
             )}
-          </Widget>
+          </div>
 
-          <Widget
-            title="Pit stop timeline"
-            description="Stationary time per stop, in order."
-            loading={pitstopsQuery.isPending}
-            className="laptop:col-span-6"
-          >
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Pit stop timeline
+            </h3>
             {pitstopsQuery.isError ? (
               <QueryError />
             ) : (
@@ -208,14 +208,16 @@ export function RacePlaybackPage() {
                 ariaLabel={`${race?.raceName ?? "Race"} pit stop durations`}
               />
             )}
-          </Widget>
+          </div>
+        </div>
+      </Section>
 
-          <Widget
-            title="Race events"
-            description="Tyre stint changes across the race."
-            loading={strategyQuery.isPending}
-            className="laptop:col-span-6"
-          >
+      <Section title="Race narrative" description="Tyre stint changes and final classification.">
+        <div className="grid grid-cols-1 gap-x-16 gap-y-10 laptop:grid-cols-2">
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Race events
+            </h3>
             {strategyQuery.isError ? (
               <QueryError />
             ) : strategyEvents.length === 0 ? (
@@ -232,14 +234,12 @@ export function RacePlaybackPage() {
                 ))}
               </ol>
             )}
-          </Widget>
+          </div>
 
-          <Widget
-            title="Driver tracking"
-            description="Final classification for this race."
-            loading={resultsQuery.isPending}
-            className="laptop:col-span-6"
-          >
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Driver tracking
+            </h3>
             {resultsQuery.isError ? (
               <QueryError />
             ) : finalClassification.length === 0 ? (
@@ -264,9 +264,9 @@ export function RacePlaybackPage() {
                 ))}
               </ol>
             )}
-          </Widget>
-        </WidgetGrid>
-      </Container>
+          </div>
+        </div>
+      </Section>
     </>
   );
 }

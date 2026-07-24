@@ -7,8 +7,7 @@ import {
   Hero,
   LineChart,
   Select,
-  Widget,
-  WidgetGrid,
+  Section,
 } from "@pit-wall-insight/ui";
 import { useState } from "react";
 
@@ -61,47 +60,48 @@ export function SeasonExplorerPage() {
         ]}
       />
 
-      <Container className="flex flex-col gap-8 pb-(--section-gap)">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <Select
-            label="Season"
-            value={seasonId}
-            onValueChange={setSeasonId}
-            options={SAMPLE_SEASONS.map((item) => ({ value: item.id, label: String(item.year) }))}
-            className="min-w-48"
-          />
-          <Badge variant="warning">Sample data</Badge>
-        </div>
+      <Container className="flex flex-wrap items-end justify-between gap-4 py-8">
+        <Select
+          label="Season"
+          value={seasonId}
+          onValueChange={setSeasonId}
+          options={SAMPLE_SEASONS.map((item) => ({ value: item.id, label: String(item.year) }))}
+          className="min-w-48"
+        />
+        <Badge variant="warning">Sample data</Badge>
+      </Container>
 
-        <WidgetGrid>
-          <Widget
-            title="Championship progress"
-            description="Cumulative driver points after each round."
-            className="sm:col-span-2 laptop:col-span-12"
-          >
-            <LineChart
-              categories={SAMPLE_ROUNDS}
-              series={season.driverStandings.map((driver) => {
-                const teamColor = getConstructorTheme(driver.constructorId);
-                return {
-                  name: driver.abbreviation,
-                  data: driver.progression,
-                  ...(teamColor ? { color: teamColor.primary } : {}),
-                };
-              })}
-              xAxisLabel="Round"
-              yAxisLabel="Points"
-              valueFormatter={(value) => `${value} pts`}
-              ariaLabel={`${season.year} championship progress by driver, sample data`}
-              height={360}
-            />
-          </Widget>
+      <Section
+        title="Championship progress"
+        description="Cumulative driver points after each round."
+      >
+        <LineChart
+          categories={SAMPLE_ROUNDS}
+          series={season.driverStandings.map((driver) => {
+            const teamColor = getConstructorTheme(driver.constructorId);
+            return {
+              name: driver.abbreviation,
+              data: driver.progression,
+              ...(teamColor ? { color: teamColor.primary } : {}),
+            };
+          })}
+          xAxisLabel="Round"
+          yAxisLabel="Points"
+          valueFormatter={(value) => `${value} pts`}
+          ariaLabel={`${season.year} championship progress by driver, sample data`}
+          height={360}
+        />
+      </Section>
 
-          <Widget
-            title="Team evolution"
-            description="Cumulative constructor points after each round."
-            className="laptop:col-span-6"
-          >
+      <Section
+        title="Evolution & battles"
+        description="Cumulative constructor points and championship gap trend."
+      >
+        <div className="grid grid-cols-1 gap-x-16 gap-y-10 laptop:grid-cols-2">
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Team evolution
+            </h3>
             <LineChart
               categories={SAMPLE_ROUNDS}
               series={season.constructorStandings.map((team) => {
@@ -116,13 +116,12 @@ export function SeasonExplorerPage() {
               valueFormatter={(value) => `${value} pts`}
               ariaLabel={`${season.year} team evolution, sample data`}
             />
-          </Widget>
+          </div>
 
-          <Widget
-            title="Championship battle"
-            description={`Points gap between ${leader.abbreviation} and ${runnerUp.abbreviation}.`}
-            className="laptop:col-span-6"
-          >
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Championship battle
+            </h3>
             <AreaChart
               categories={SAMPLE_ROUNDS}
               series={[{ name: "Gap", data: gapTrend }]}
@@ -130,13 +129,19 @@ export function SeasonExplorerPage() {
               valueFormatter={(value) => `${value} pts`}
               ariaLabel={`${season.year} championship battle points gap, sample data`}
             />
-          </Widget>
+          </div>
+        </div>
+      </Section>
 
-          <Widget
-            title="Constructor dominance"
-            description="Race wins by constructor this season."
-            className="laptop:col-span-6"
-          >
+      <Section
+        title="Constructor dominance & calendar"
+        description="Race wins by constructor and schedule results."
+      >
+        <div className="grid grid-cols-1 gap-x-16 gap-y-10 laptop:grid-cols-2">
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Constructor dominance
+            </h3>
             <BarChart
               categories={season.constructorStandings.map((team) => team.name)}
               series={[
@@ -148,13 +153,12 @@ export function SeasonExplorerPage() {
               yAxisLabel="Wins"
               ariaLabel={`${season.year} constructor dominance by wins, sample data`}
             />
-          </Widget>
+          </div>
 
-          <Widget
-            title="Race calendar"
-            description="Round-by-round results for this season."
-            className="laptop:col-span-6"
-          >
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Race calendar
+            </h3>
             <ol className="flex flex-col gap-2">
               {season.calendar.map((race) => (
                 <li
@@ -171,9 +175,9 @@ export function SeasonExplorerPage() {
                 </li>
               ))}
             </ol>
-          </Widget>
-        </WidgetGrid>
-      </Container>
+          </div>
+        </div>
+      </Section>
     </>
   );
 }

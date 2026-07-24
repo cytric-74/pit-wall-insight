@@ -1,13 +1,4 @@
-import {
-  Badge,
-  BarChart,
-  Container,
-  Hero,
-  LineChart,
-  Select,
-  Widget,
-  WidgetGrid,
-} from "@pit-wall-insight/ui";
+import { Badge, BarChart, Container, Hero, LineChart, Select, Section } from "@pit-wall-insight/ui";
 import { useState } from "react";
 
 import { EmptyState } from "../../lib/empty-state.js";
@@ -34,7 +25,7 @@ const RACE_SESSION_TYPE = "R";
  * window" comparison (no such model exists) and shows real pit stops
  * instead — currently empty for most races, the same documented
  * `fct_pitstop` gap seen on Race Playback. "Undercut analysis", "Overcut
- * analysis", and "Strategy simulation" stay permanent `loading`
+ * analysis", and "Strategy simulation" stay permanent loading
  * placeholders: none of the three has *any* data source in this
  * pipeline (docs/08 explicitly scopes them out — they need pit-stop
  * timing more complete than Phase 4's gap allows, or a prediction model
@@ -85,68 +76,113 @@ export function StrategyLabPage() {
         ]}
       />
 
-      <Container className="flex flex-col gap-8 pb-(--section-gap)">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <Select
-            label="Race"
-            {...(raceId !== undefined && { value: raceId })}
-            onValueChange={setSelectedId}
-            options={races.map((item) => ({
-              value: item.id,
-              label: item.raceName ?? `Round ${item.round}`,
-            }))}
-            className="min-w-64"
-          />
-        </div>
+      <Container className="flex flex-wrap items-end justify-between gap-4 py-8">
+        <Select
+          label="Race"
+          {...(raceId !== undefined && { value: raceId })}
+          onValueChange={setSelectedId}
+          options={races.map((item) => ({
+            value: item.id,
+            label: item.raceName ?? `Round ${item.round}`,
+          }))}
+          className="min-w-64"
+        />
+      </Container>
 
-        <WidgetGrid>
-          <Widget
-            title="Tyre strategy"
-            description="Stint-by-stint compound choices for each driver."
-            loading={strategyQuery.isPending}
-            className="sm:col-span-2 laptop:col-span-12"
-          >
-            {strategyQuery.isError ? (
-              <QueryError />
-            ) : (
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 laptop:grid-cols-3">
-                {driverStrategies.map((driver) => (
-                  <div key={driver.driver} className="flex flex-col gap-2">
-                    <span className="text-caption uppercase tracking-wide text-text-muted">
-                      {driver.driver}
-                    </span>
-                    <ol className="flex flex-col gap-2">
-                      {driver.stints.map((stint) => (
-                        <li
-                          key={`${stint.compound}-${stint.startLap}`}
-                          className="flex items-center justify-between gap-3 border-b border-border-subtle pb-2 last:border-b-0 last:pb-0"
-                        >
-                          <Badge variant={resolveCompoundBadgeVariant(stint.compound)}>
-                            {stint.compound ?? "Unknown"}
-                          </Badge>
-                          <span className="font-mono text-caption tabular-nums text-text-muted">
-                            L{stint.startLap}–{stint.endLap}
-                          </span>
-                          <span className="text-body-sm text-text-secondary">
-                            {stint.lapCount} laps
-                          </span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                ))}
+      <Section title="Tyre strategy" description="Stint-by-stint compound choices for each driver.">
+        {strategyQuery.isError ? (
+          <QueryError />
+        ) : strategyQuery.isPending ? (
+          <EmptyState message="Syncing telemetry…" />
+        ) : (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 laptop:grid-cols-3">
+            {driverStrategies.map((driver) => (
+              <div key={driver.driver} className="flex flex-col gap-2">
+                <span className="font-mono text-caption uppercase tracking-wide text-text-muted">
+                  {driver.driver}
+                </span>
+                <ol className="flex flex-col gap-2">
+                  {driver.stints.map((stint) => (
+                    <li
+                      key={`${stint.compound}-${stint.startLap}`}
+                      className="flex items-center justify-between gap-3 border-b border-border-subtle pb-2 last:border-b-0 last:pb-0"
+                    >
+                      <Badge variant={resolveCompoundBadgeVariant(stint.compound)}>
+                        {stint.compound ?? "Unknown"}
+                      </Badge>
+                      <span className="font-mono text-caption tabular-nums text-text-muted">
+                        L{stint.startLap}–{stint.endLap}
+                      </span>
+                      <span className="text-body-sm text-text-secondary">
+                        {stint.lapCount} laps
+                      </span>
+                    </li>
+                  ))}
+                </ol>
               </div>
-            )}
-          </Widget>
+            ))}
+          </div>
+        )}
+      </Section>
 
-          <Widget
-            title="Pit windows"
-            description="Actual pit stops this race, in order."
-            loading={pitstopsQuery.isPending}
-            className="laptop:col-span-6"
-          >
+      <Section
+        title="Tyre degradation"
+        description="Pace loss per compound as tyre life increases."
+      >
+        {degradationQuery.isError ? (
+          <QueryError />
+        ) : degradationQuery.isPending ? (
+          <EmptyState message="Syncing telemetry…" />
+        ) : (
+          <LineChart
+            categories={degradationChart.categories}
+            series={degradationChart.series.map((entry) => ({
+              name: entry.compound,
+              data: entry.data,
+            }))}
+            xAxisLabel="Tyre life (laps)"
+            yAxisLabel="s"
+            valueFormatter={(value) => `${value.toFixed(2)}s`}
+            ariaLabel={`${selectedRace?.raceName ?? "Race"} tyre degradation by compound`}
+            height={400}
+          />
+        )}
+      </Section>
+
+      <Section
+        title="Strategy narrative"
+        description="Compound effectiveness and actual pit stop timeline."
+      >
+        <div className="grid grid-cols-1 gap-x-16 gap-y-10 laptop:grid-cols-2">
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Compound effectiveness
+            </h3>
+            {degradationQuery.isError ? (
+              <QueryError />
+            ) : degradationQuery.isPending ? (
+              <EmptyState message="Syncing telemetry…" />
+            ) : (
+              <BarChart
+                categories={effectiveness.map((entry) => entry.compound)}
+                series={[
+                  { name: "Avg pace", data: effectiveness.map((entry) => entry.averageLapTime) },
+                ]}
+                yAxisLabel="Seconds"
+                valueFormatter={(value) => `${value.toFixed(1)}s`}
+                ariaLabel={`${selectedRace?.raceName ?? "Race"} compound effectiveness`}
+              />
+            )}
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <h3 className="font-mono text-caption uppercase tracking-wide text-text-muted">
+              Pit windows
+            </h3>
             {pitstopsQuery.isError ? (
               <QueryError />
+            ) : pitstopsQuery.isPending ? (
+              <EmptyState message="Syncing telemetry…" />
             ) : pitstops.length === 0 ? (
               <EmptyState message="No pit stops found" />
             ) : (
@@ -166,74 +202,16 @@ export function StrategyLabPage() {
                 ))}
               </ol>
             )}
-          </Widget>
+          </div>
+        </div>
+      </Section>
 
-          <Widget
-            title="Tyre degradation"
-            description="Pace loss per compound as tyre life increases."
-            loading={degradationQuery.isPending}
-            className="laptop:col-span-6"
-          >
-            {degradationQuery.isError ? (
-              <QueryError />
-            ) : (
-              <LineChart
-                categories={degradationChart.categories}
-                series={degradationChart.series.map((entry) => ({
-                  name: entry.compound,
-                  data: entry.data,
-                }))}
-                xAxisLabel="Tyre life (laps)"
-                yAxisLabel="s"
-                valueFormatter={(value) => `${value.toFixed(2)}s`}
-                ariaLabel={`${selectedRace?.raceName ?? "Race"} tyre degradation by compound`}
-              />
-            )}
-          </Widget>
-
-          <Widget
-            title="Undercut analysis"
-            description="Net time gained or lost attempting the undercut."
-            loading
-            className="laptop:col-span-6"
-          />
-
-          <Widget
-            title="Overcut analysis"
-            description="Net time gained or lost attempting the overcut."
-            loading
-            className="laptop:col-span-6"
-          />
-
-          <Widget
-            title="Compound effectiveness"
-            description="Average lap pace by compound across the field."
-            loading={degradationQuery.isPending}
-            className="laptop:col-span-6"
-          >
-            {degradationQuery.isError ? (
-              <QueryError />
-            ) : (
-              <BarChart
-                categories={effectiveness.map((entry) => entry.compound)}
-                series={[
-                  { name: "Avg pace", data: effectiveness.map((entry) => entry.averageLapTime) },
-                ]}
-                yAxisLabel="Seconds"
-                valueFormatter={(value) => `${value.toFixed(1)}s`}
-                ariaLabel={`${selectedRace?.raceName ?? "Race"} compound effectiveness`}
-              />
-            )}
-          </Widget>
-
-          <Widget
-            title="Strategy simulation"
-            description="Precomputed candidate strategies compared by total race time."
-            loading
-            className="sm:col-span-2 laptop:col-span-12"
-          />
-        </WidgetGrid>
-      </Container>
+      <Section title="Strategy simulation" description="Precomputed analysis and projections.">
+        <p className="font-mono text-caption uppercase tracking-wide text-text-muted">
+          Undercut, overcut analysis, and precomputed candidate strategies compared by total race
+          time are not available for this race yet.
+        </p>
+      </Section>
     </>
   );
 }
